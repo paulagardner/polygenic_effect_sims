@@ -17,7 +17,7 @@ def make_parser() -> argparse.ArgumentParser:
 
     # parser.add_argument("--seed", "-s", type=int, default=0, help="Random number seed")
 
-    parser.add_argument("--N", type=float, help="Number of individuals")
+    parser.add_argument("--N", type=int, help="Number of individuals")
 
     parser.add_argument("--MU", "--u", type=float, help="Mutation rate")
 
@@ -54,15 +54,17 @@ def validate_args(args: argparse.Namespace):
     if args.POPT is None:
         raise ValueError(f"Population optimum trait value cannot be None")
 
-    # if args.N is None:
-    # raise ValueError(f"Number of generations cannot be None") #this was giving me trouble. Error was AttributeError: 'Namespace' object has no attribute 'N'
+    if args.N is None:
+        raise ValueError(
+            f"Number of individuals cannot be None"
+        )  # this was giving me trouble. Error was AttributeError: 'Namespace' object has no attribute 'N'
 
     if args.MU is None:
         raise ValueError(f"Mutation rate cannot be None")
 
     if args.VS is None:
         raise ValueError(
-            f"In this simulation of stabilizing selection, VS cannot be None"
+            f"In this simulation using stabilizing selection, VS cannot be None"
         )
 
 
@@ -100,9 +102,11 @@ def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
 
         fwdpy11.evolvets(rng, pop, params, 100)
 
-        md = np.array(pop.diploid_metadata, copy=False)
+        # md = np.array(pop.diploid_metadata, copy=False)
 
-        h2 = md["g"].var() / ((md["g"] + md["e"]).var())
+        # h2 = md["g"].var() / ((md["g"] + md["e"]).var())
+
+        return pop # if you don't return pop you'll get an error in write_treefile: 'AttributeError: 'NoneType' object has no attribute 'dump_tables_to_tskit'
 
 
 def write_treefile(pop: fwdpy11.DiploidPopulation, args: argparse.Namespace):
