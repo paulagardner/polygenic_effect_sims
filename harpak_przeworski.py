@@ -68,6 +68,9 @@ def validate_args(args: argparse.Namespace):
         )
 
 
+# example for how you might run this: python harpak_przeworski.py --N 100 --MU 1e-3 --POPT 0.0 --VS 1.0 --E_SD 1.0 --E_MEAN 1.0 --treefile harpak_przeworski.trees
+
+
 def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
     for rep in range(5):
 
@@ -106,12 +109,28 @@ def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
 
         # h2 = md["g"].var() / ((md["g"] + md["e"]).var())
 
-        return pop # if you don't return pop you'll get an error in write_treefile: 'AttributeError: 'NoneType' object has no attribute 'dump_tables_to_tskit'
+        return pop  # if you don't return pop you'll get an error in write_treefile: 'AttributeError: 'NoneType' object has no attribute 'dump_tables_to_tskit'
 
 
 def write_treefile(pop: fwdpy11.DiploidPopulation, args: argparse.Namespace):
     ts = pop.dump_tables_to_tskit()
     ts.dump(args.treefile)
+
+
+ts = fwdpy11.tskit_tools.load(
+    sys.argv[1]
+)  # calling sys.argv[1] is because treefile is our 'first' command line argument as defined in make_parser, right?
+
+ind_md = ts.decode_individual_metadata()
+
+fitness = np.zeros(len(ind_md))
+phenotype = np.zeros(len(ind_md))
+
+for i, md in enumerate(ind_md):
+    fitness[i] = md.w
+    phenotype[i] = md.g + md.e
+
+print(f"Mean fitness = {fitness.mean()}.  Mean phenotype = {phenotype.mean()}")
 
 
 if __name__ == "__main__":
