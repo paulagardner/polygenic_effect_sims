@@ -12,7 +12,7 @@ def make_parser() -> argparse.ArgumentParser:
 
     # Add an argument
     parser.add_argument(
-        "--treefile", "-t", type=str, default=None, help="Tree file name (tskit format)"
+        "--treefile", "-t", type=str, default=None, help="Tree file output name (tskit format)"
     )
 
     # parser.add_argument("--seed", "-s", type=int, default=0, help="Random number seed")
@@ -46,7 +46,7 @@ def make_parser() -> argparse.ArgumentParser:
 
 def validate_args(args: argparse.Namespace):
     if args.treefile is None:
-        raise ValueError(f"treefile cannot be None")
+        raise ValueError(f"treefile to be written cannot be None")
 
     # if args.seed < 0:
     # raise ValueError(f"invalid seed value: {args.seed}")
