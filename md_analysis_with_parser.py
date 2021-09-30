@@ -38,6 +38,7 @@ def calc_stats(args: argparse.namespace) -> fwdpy11.tskit_tools.load:
     ind_md = ts.decode_individual_metadata()
     fitness = np.zeros(len(ind_md))
     phenotype = np.zeros(len(ind_md))
+    
     for i, md in enumerate(ind_md):
         fitness[i] = md.w
         phenotype[i] = md.g + md.e
