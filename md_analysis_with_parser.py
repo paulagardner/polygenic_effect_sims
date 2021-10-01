@@ -19,7 +19,7 @@ def make_parser() -> argparse.ArgumentParser:
     parser.add_argument("--treefile", "-t", type = str, default = None, help = "Tree file input name")
 
     #in our case, we need the previous filname to load things in, and need to specify what file is going to come out of it 
-    parser.add_argument("--metadata_output", "-o". type = str, default = None, help = "Output file name")
+    parser.add_argument("--metadata_output", "-o", type = str, default = None, help = "Output file name")
 
     return parser
 
@@ -33,8 +33,8 @@ def validate_args(args: argparse.Namespace):
 
 
 
-#do the function for which you have made the arguments 
-def calc_stats(args: argparse.namespace) -> fwdpy11.tskit_tools.load:
+#do the function for which you have made the arguments, write the output to another file
+def fitness_phenotype_summary(args: argparse.Namespace) -> fwdpy11.tskit_tools.load:
     ind_md = ts.decode_individual_metadata()
     fitness = np.zeros(len(ind_md))
     phenotype = np.zeros(len(ind_md))
@@ -43,13 +43,20 @@ def calc_stats(args: argparse.namespace) -> fwdpy11.tskit_tools.load:
         fitness[i] = md.w
         phenotype[i] = md.g + md.e
 
-    print(f"Mean fitness = {fitness.mean()}.  Mean phenotype = {phenotype.mean()}")
+    with open (args.metadata_output, 'w') as output_file: #'w' here is just the standard python switch(?) for write. Metadata_output is your parser argument, in the make_parser function
+        #output_file.write(print(f"Mean fitness = {fitness.mean()}.  Mean phenotype = {phenotype.mean()}"))
+        print(f"Mean fitness = {fitness.mean()}.  Mean phenotype = {phenotype.mean()}")
 
-#you want to write to a file for downstream analysis 
-def write_nextfile():
+    #print(f"Mean fitness = {fitness.mean()}.  Mean phenotype = {phenotype.mean()}")
 
 
-#main
+#you want to write to a file to look at and for future downstream analysis 
+#def write_nextfile(args: argparse.Namespace):
+    #args = parser.parse_args()
+    #with open (args.metadata_output, 'w') as output_file: #'w' here is just the standard python switch(?) for write. Metadata_output is your parser argument, in the make_parser function
+        #output_file.write(print(f"Mean fitness = {fitness.mean()}.  #Mean phenotype = {phenotype.mean()}"))
+
+
 if __name__ == "__main__":
     # build our parser
     parser = make_parser()
@@ -61,7 +68,8 @@ if __name__ == "__main__":
     validate_args(args)
 
     #do the function we want it to do (requires that function has a name)
-    printvariable = calc_stats(args)
+    #printvariable = fitness_phenotype_summary(args) #variable not necessary if you're not passing it to the next function(?)
+    fitness_phenotype_summary(args)
 
     #write the output to a file that can be analysed downstream 
-    write_nextfile(printvariable, args)
+    #write_nextfile(printvariable, args) #may not be necessary, as you've combined the process and write function 
