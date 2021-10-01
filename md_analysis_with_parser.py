@@ -35,6 +35,9 @@ def validate_args(args: argparse.Namespace):
 
 #do the function for which you have made the arguments, write the output to another file
 def fitness_phenotype_summary(args: argparse.Namespace) -> fwdpy11.tskit_tools.load:
+    #ts = fwdpy11.tskit_tools.load(sys.argv[1])
+    input_file = args.treefile
+    ts = fwdpy11.tskit_tools.load(input_file)
     ind_md = ts.decode_individual_metadata()
     fitness = np.zeros(len(ind_md))
     phenotype = np.zeros(len(ind_md))
