@@ -3,6 +3,9 @@ import sys
 import fwdpy11
 import numpy as np
 
+#example usage: python md_analysis_with_parser.py --treefile harpak_przeworski.trees --metadata_output harpak_przeworski.txt
+
+
 #ts = fwdpy11.tskit_tools.load(
     #sys.argv[1]
 #}  # idea would be: calling sys.argv[1] is because treefile is our 'first' command line argument as defined in make_parser, right?
@@ -48,6 +51,7 @@ def fitness_phenotype_summary(args: argparse.Namespace) -> fwdpy11.tskit_tools.l
 
     with open (args.metadata_output, 'w') as output_file: #'w' here is just the standard python switch(?) for write. Metadata_output is your parser argument, in the make_parser function
         #output_file.write(print(f"Mean fitness = {fitness.mean()}.  Mean phenotype = {phenotype.mean()}"))
+        output_file.write(f"Mean fitness = {fitness.mean()}.  Mean phenotype = {phenotype.mean()}")
         print(f"Mean fitness = {fitness.mean()}.  Mean phenotype = {phenotype.mean()}")
 
     #print(f"Mean fitness = {fitness.mean()}.  Mean phenotype = {phenotype.mean()}")
