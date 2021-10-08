@@ -1,0 +1,1 @@
+Mean fitness = 0.6950586709449498.  Mean phenotype = -0.16633000395614755
