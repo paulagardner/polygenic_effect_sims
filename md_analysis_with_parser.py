@@ -3,28 +3,36 @@ import sys
 import fwdpy11
 import numpy as np
 
-# example usage: python md_analysis_with_parser.py --treefile harpak_przeworski.trees --metadata_output harpak_przeworski.txt
-
-
-# ts = fwdpy11.tskit_tools.load(
-# sys.argv[1]
-# }  # idea would be: calling sys.argv[1] is because treefile is our 'first' command line argument as defined in make_parser, right?
-
-# the above was present in the file kevin sent as a sample. You've put it in your calc_stats function below, much the same way that in the main simulation file, run_sim is in fwdpy11.DiploidPopulation, since we want tskit_tools.load to load in the file, yes? And validate_args will not be doing it...
+# example usage: python md_analysis_with_parser.py harpak_przeworski.trees --metadata_output harpak_przeworski.txt or
+# OR (positional argument style) python md_analysis_with_parser.py  --metadata_output harpak_przeworski.txt harpak_przeworski.trees. It seems if you only have one positional argument it doesn't matter where it goes. If the parser no longer has treefile as a positional argument, this will change.
 
 
 def make_parser() -> argparse.ArgumentParser:
     # make an argument parser that can output help.
-    # The __file__ is the full path to this file
+
     ADHF = argparse.ArgumentDefaultsHelpFormatter
-    parser = argparse.ArgumentParser(__file__, formatter_class=ADHF)
+    parser = argparse.ArgumentParser(
+        __file__,
+        formatter_class=ADHF,
+        description="process treefiles and output metadata",
+    )
+    ## __file__ is the full path to this file
 
     # Add an argument
-    parser.add_argument(
-        "--treefile", "-t", type=str, default=None, help="Tree file input name"
-    )
 
-    # in our case, we need the previous filname to load things in, and need to specify what file is going to come out of it
+    # in our case, we need the previous filname to load things in, and need to specify what file is going to come out of it. However, the treefiles argument will be put in at the end, since they will be positional arguments and those have to come at the end.
+    parser.add_argument(
+        "--treefile",
+        metavar="treefile",  # metavar vs dest, etc https://stackoverflow.com/questions/50965583/python-argparse-multiple-metavar-names
+        nargs="+",
+        type=str,
+        default=None,
+        help="Tree file input name",
+    )
+    # I want to be able to specify multiple treefiles so that I can have everything write to a single, output.txt file for processing later
+    # https://docs.python.org/3/library/argparse.html
+    # it isn't working in the same way it wasn't working when treefile() was a positional argument, but from Kevin: "that type of design usually will force you to write the tree file name to your output file, allowing you to match rows to particular files.". SO I think the issue is with my fitness_phenotype_summary function
+
     parser.add_argument(
         "--metadata_output", "-o", type=str, default=None, help="Output file name"
     )
@@ -42,34 +50,59 @@ def validate_args(args: argparse.Namespace):
 
 # do the function for which you have made the arguments, write the output to another file
 def fitness_phenotype_summary(args: argparse.Namespace) -> fwdpy11.tskit_tools.load:
-    # ts = fwdpy11.tskit_tools.load(sys.argv[1])
-    input_file = args.treefile
-    ts = fwdpy11.tskit_tools.load(input_file)
-    ind_md = ts.decode_individual_metadata()
-    fitness = np.zeros(len(ind_md))
-    phenotype = np.zeros(len(ind_md))
-
-    for i, md in enumerate(ind_md):
-        fitness[i] = md.w
-        phenotype[i] = md.g + md.e
 
     with open(
         args.metadata_output, "w"
     ) as output_file:  #'w' here is just the standard python switch(?) for write. Metadata_output is your parser argument, in the make_parser function
-        # output_file.write(print(f"Mean fitness = {fitness.mean()}.  Mean phenotype = {phenotype.mean()}"))
+        # trying to fomat following this:
         output_file.write(
-            f"Mean fitness = {fitness.mean()}.  Mean phenotype = {phenotype.mean()}"
+            f"Treefile name\t\t\tMean fitness\t\t\tMean genetic value\t\t\tMean environmental value\t\t\tMean phenotype"
         )
-        print(f"Mean fitness = {fitness.mean()}.  Mean phenotype = {phenotype.mean()}")
 
-    # print(f"Mean fitness = {fitness.mean()}.  Mean phenotype = {phenotype.mean()}")
+        input_file = args.treefile
+        for input_file in args.treefile:
+            ts = fwdpy11.tskit_tools.load(input_file)
+            ind_md = ts.decode_individual_metadata()
+            # fitness = np.zeros(len(ind_md))
+            # phenotype = np.zeros(len(ind_md))
+            # genetic_value = np.zeros(len(ind_md))
+            # environmental_value = np.zeros(len(ind_md))
+
+            fitness = np.array([md.w for md in ind_md])
+            genetic_value = np.array([md.g for md in ind_md])
+            environmental_value = np.array([md.e for md in ind_md])
+            phenotype = np.array([md.g + md.e for md in ind_md])
+
+            # Originally was using a for() loop of this format, but requires more lines:
+            # fitness = np.zeros(len(ind_md))
+            # phenotype = np.zeros(len(ind_md))
+            # genetic_value = np.zeros(len(ind_md))
+            # environmental_value = np.zeros(len(ind_md))
+
+            # for i, md in enumerate(ind_md):
+            #   fitness[i] = md.w
+
+            #   genetic_value[i] = md.g
+
+            #   environmental_value[i] = md.e
+
+            #   phenotype[i] = md.g + md.e
+
+            output_file.write(
+                f"\n{input_file:<30} {fitness.mean():<30} {genetic_value.mean():<30} {environmental_value.mean():<30} {phenotype.mean():<30}"  # for reference #http://cis.bentley.edu/sandbox/wp-content/uploads/Documentation-on-f-strings.pdf
+            )
+        #    break  # working version, just doesn't allow you to use multiple file inputs"""
+
+        print(
+            f"Treefile name\t\t\tMean fitness\t\t\tMean genetic value\t\t\tMean environmental value\t\t\tMean phenotype\n{input_file}\t\t{fitness.mean()}\t\t{genetic_value.mean()}\t\t{environmental_value.mean()}\t\t{phenotype.mean()}"
+        )
+
+        # f"{args.treefile}" #https://zetcode.com/python/argparse/ include args.treefile as your column name
+
+        # you want to write to a file to look at and for future downstream analysis
 
 
-# you want to write to a file to look at and for future downstream analysis
-# def write_nextfile(args: argparse.Namespace):
-# args = parser.parse_args()
-# with open (args.metadata_output, 'w') as output_file: #'w' here is just the standard python switch(?) for write. Metadata_output is your parser argument, in the make_parser function
-# output_file.write(print(f"Mean fitness = {fitness.mean()}.  #Mean phenotype = {phenotype.mean()}"))
+# def write_nextfile(args: argparse.Namespace): #not really needed here,
 
 
 if __name__ == "__main__":
