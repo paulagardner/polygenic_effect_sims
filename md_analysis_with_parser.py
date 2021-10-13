@@ -22,7 +22,7 @@ def make_parser() -> argparse.ArgumentParser:
 
     # in our case, we need the previous filname to load things in, and need to specify what file is going to come out of it. However, the treefiles argument will be put in at the end, since they will be positional arguments and those have to come at the end.
     parser.add_argument(
-        "--treefile",
+        "treefile",
         metavar="treefile",  # metavar vs dest, etc https://stackoverflow.com/questions/50965583/python-argparse-multiple-metavar-names
         nargs="+",
         type=str,
@@ -56,7 +56,8 @@ def fitness_phenotype_summary(args: argparse.Namespace) -> fwdpy11.tskit_tools.l
     ) as output_file:  #'w' here is just the standard python switch(?) for write. Metadata_output is your parser argument, in the make_parser function
         # trying to fomat following this:
         output_file.write(
-            f"Treefile name\t\t\tMean fitness\t\t\tMean genetic value\t\t\tMean environmental value\t\t\tMean phenotype"
+            # f"Treefile name\t\t\tMean fitness\t\t\tMean genetic value\t\t\tMean environmental value\t\t\tMean phenotype")
+            f"{'Treefile_name':<30} {'Mean_fitness':<30} {'Mean_genetic_value':<30} {'Mean_environmental_value':<30} {'Mean_phenotype':<30}\n"
         )
 
         input_file = args.treefile
@@ -89,12 +90,12 @@ def fitness_phenotype_summary(args: argparse.Namespace) -> fwdpy11.tskit_tools.l
             #   phenotype[i] = md.g + md.e
 
             output_file.write(
-                f"\n{input_file:<30} {fitness.mean():<30} {genetic_value.mean():<30} {environmental_value.mean():<30} {phenotype.mean():<30}"  # for reference #http://cis.bentley.edu/sandbox/wp-content/uploads/Documentation-on-f-strings.pdf
+                f"\n{input_file:<30} {fitness.mean():<30} {genetic_value.mean():<30} {environmental_value.mean():<30} {phenotype.mean():<30}\n"  # for reference #http://cis.bentley.edu/sandbox/wp-content/uploads/Documentation-on-f-strings.pdf
             )
-        #    break  # working version, just doesn't allow you to use multiple file inputs"""
+            # why the newline character at the end? If you want to process things in R, you get a warning message "incomplete final line found" if you don't include it.
 
         print(
-            f"Treefile name\t\t\tMean fitness\t\t\tMean genetic value\t\t\tMean environmental value\t\t\tMean phenotype\n{input_file}\t\t{fitness.mean()}\t\t{genetic_value.mean()}\t\t{environmental_value.mean()}\t\t{phenotype.mean()}"
+            f"{'Treefile name':<30} {'Mean fitness':<30} {'Mean genetic value':<30} {'Mean environmental value':<30} {'Mean phenotype':<30}\n{input_file:<30} {fitness.mean():<30} {genetic_value.mean():<30} {environmental_value.mean():<30} {phenotype.mean():<30}"
         )
 
         # f"{args.treefile}" #https://zetcode.com/python/argparse/ include args.treefile as your column name
