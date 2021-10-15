@@ -58,7 +58,7 @@ def fitness_phenotype_summary(args: argparse.Namespace) -> fwdpy11.tskit_tools.l
         output_file.write(
             # f"Treefile name\t\t\tMean fitness\t\t\tMean genetic value\t\t\tMean environmental value\t\t\tMean phenotype")
             f"{'Treefile_name':<30} {'Mean_fitness':<30} {'Mean_genetic_value':<30} {'Mean_environmental_value':<30} {'Mean_phenotype':<30}\n"
-        )
+        )  # why formatting with underscores? If not, the way my plotting_metadata.r function works doesn't seem to read the headers in correctly
 
         input_file = args.treefile
         for input_file in args.treefile:
