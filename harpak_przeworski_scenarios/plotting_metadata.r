@@ -18,3 +18,4 @@ metadata <- read.table("harpak_przeworski.txt", header = TRUE, sep = "")
 
 metadata
 
+plot(metadata)

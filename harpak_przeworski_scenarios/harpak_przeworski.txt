@@ -1,5 +1,3 @@
 Treefile_name                  Mean_fitness                   Mean_genetic_value             Mean_environmental_value       Mean_phenotype                
-
 harpak_przeworski.trees        0.6950586709449498             -1.1860112229155269            1.0196812189593794             -0.16633000395614755          
-
 harpak_przeworski.trees1       0.6920862575389409             -0.8792313640931709            0.8312748734218527             -0.04795649067131826          
