@@ -135,4 +135,4 @@ if __name__ == "__main__":
     pop,params,seed = run_sim(args) #if you keep as before, where pop = run_sim, AttributeError: 'function' object has no attribute 'params'
 
     # write the output to a tskit "trees" file
-    write_treefile(pop, params, seed, args)
+    write_treefile(pop, args)
