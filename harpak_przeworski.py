@@ -72,48 +72,52 @@ def validate_args(args: argparse.Namespace):
 
 
 def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
-    for rep in range(5):
+    MU = args.MU
+    POPT = args.POPT
+    VS = args.VS
+    E_SD = args.E_SD
+    E_MEAN = args.E_MEAN
+    N = args.N
 
-        MU = args.MU
-        POPT = args.POPT
-        VS = args.VS
-        E_SD = args.E_SD
-        E_MEAN = args.E_MEAN
-        N = args.N
+    paramsdict = {
+        "sregions": [fwdpy11.GaussianS(0, 1, 1, 0.25)],
+        "nregions": [],
+        "recregions": [fwdpy11.PoissonInterval(0, 1.00, 1e-3)],
+        "rates": (0, MU, None),
+        "gvalue": [
+            fwdpy11.Additive(
+                2, fwdpy11.GSS(POPT, VS), fwdpy11.GaussianNoise(E_SD, E_MEAN)
+            )
+        ],
+        "prune_selected": False,
+        "simlen": 10 * N,
+    }
 
-        pdict = {
-            "sregions": [fwdpy11.GaussianS(0, 1, 1, 0.25)],
-            "nregions": [],
-            "recregions": [fwdpy11.PoissonInterval(0, 1.00, 1e-3)],
-            "rates": (0, MU, None),
-            "gvalue": [
-                fwdpy11.Additive(
-                    2, fwdpy11.GSS(POPT, VS), fwdpy11.GaussianNoise(E_SD, E_MEAN)
-                )
-            ],
-            "prune_selected": False,
-            "simlen": 10 * N,
-        }
+    pop = fwdpy11.DiploidPopulation(N, 1.00)
+    
+    seed = np.random.randint(0, 100000, 1)[0]
 
-        pop = fwdpy11.DiploidPopulation(N, 1.00)
+    rng = fwdpy11.GSLrng(seed)
+ 
+    params = fwdpy11.ModelParams(**paramsdict) #as in example for dict, these can be the same variable. I keep them separate here for legibility
 
-        seed = np.random.randint(0, 100000, 1)[0]
+    fwdpy11.evolvets(rng, pop, params, simplification_interval=100)
 
-        rng = fwdpy11.GSLrng(seed)
+    # md = np.array(pop.diploid_metadata, copy=False)
 
-        params = fwdpy11.ModelParams(**pdict)
+    # h2 = md["g"].var() / ((md["g"] + md["e"]).var())
 
-        fwdpy11.evolvets(rng, pop, params, 100)
+    return pop, params, seed # if you don't return pop you'll get an error in write_treefile: 'AttributeError: 'NoneType' object has no attribute 'dump_tables_to_tskit'
 
-        # md = np.array(pop.diploid_metadata, copy=False)
-
-        # h2 = md["g"].var() / ((md["g"] + md["e"]).var())
-
-        return pop  # if you don't return pop you'll get an error in write_treefile: 'AttributeError: 'NoneType' object has no attribute 'dump_tables_to_tskit'
 
 
 def write_treefile(pop: fwdpy11.DiploidPopulation, args: argparse.Namespace):
-    ts = pop.dump_tables_to_tskit()
+    ts = pop.dump_tables_to_tskit(# The actual model params
+    model_params= params,
+    # Any dict you want.  Some of what I'm putting here is redundant...
+    # This dict will get written to the "provenance" table
+    parameters={"seed": seed, "simplification_interval": 100, "meanE": -0.1},
+    wrapped=True,)
     ts.dump(args.treefile)
 
 
@@ -128,7 +132,7 @@ if __name__ == "__main__":
     validate_args(args)
 
     # evolve our population
-    pop = run_sim(args)
+    pop,params,seed = run_sim(args) #if you keep as before, where pop = run_sim, AttributeError: 'function' object has no attribute 'params'
 
     # write the output to a tskit "trees" file
-    write_treefile(pop, args)
+    write_treefile(pop, params, seed, args)
