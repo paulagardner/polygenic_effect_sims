@@ -95,7 +95,10 @@ def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
 
     pop = fwdpy11.DiploidPopulation(N, 1.00)
     
-    seed = np.random.randint(0, 100000, 1)[0]
+    # randint returns numpt.int64, which json doesn't
+    # know how to handle.  So, we turn it 
+    # to a regular Python int to circumvent this problem.
+    seed = int(np.random.randint(0, 100000, 1)[0])
 
     rng = fwdpy11.GSLrng(seed)
  
@@ -111,14 +114,16 @@ def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
 
 
 
-def write_treefile(pop: fwdpy11.DiploidPopulation, args: argparse.Namespace):
+def write_treefile(pop: fwdpy11.DiploidPopulation, seed: int, args: argparse.Namespace):
     ts = pop.dump_tables_to_tskit(# The actual model params
     model_params= params,
     # Any dict you want.  Some of what I'm putting here is redundant...
     # This dict will get written to the "provenance" table
     parameters={"seed": seed, "simplification_interval": 100, "meanE": -0.1},
     wrapped=True,)
-    ts.dump(args.treefile)
+    # The ts is a fwdpy11.WrappedTreeSequence.
+    # To dump it, access the underling tskit.TreeSequence
+    ts.ts.dump(args.treefile)
 
 
 if __name__ == "__main__":
@@ -135,4 +140,4 @@ if __name__ == "__main__":
     pop,params,seed = run_sim(args) #if you keep as before, where pop = run_sim, AttributeError: 'function' object has no attribute 'params'
 
     # write the output to a tskit "trees" file
-    write_treefile(pop, args)
+    write_treefile(pop, seed, args)
