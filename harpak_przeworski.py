@@ -2,7 +2,8 @@ import argparse
 import fwdpy11
 import sys
 import numpy as np
-
+import json
+import tskit
 
 def make_parser() -> argparse.ArgumentParser:
     # make an argument parser that can output help.
@@ -116,7 +117,8 @@ def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
 
 def write_treefile(pop: fwdpy11.DiploidPopulation, seed: int, args: argparse.Namespace):
     ts = pop.dump_tables_to_tskit(# The actual model params
-    model_params= params,
+    model_params= params, #why is it not necessary to have params as an argument in write_treefile, like seed or args? from my understanding, we're defining it here, and model_params is of class ModelParams(so far as I can tell)
+
     # Any dict you want.  Some of what I'm putting here is redundant...
     # This dict will get written to the "provenance" table
     parameters={"seed": seed, "simplification_interval": 100, "meanE": -0.1},
@@ -125,6 +127,12 @@ def write_treefile(pop: fwdpy11.DiploidPopulation, seed: int, args: argparse.Nam
     # To dump it, access the underling tskit.TreeSequence
     ts.ts.dump(args.treefile)
 
+
+    print(ts.model_params.gvalue.gvalue_to_fitness.POPT) #AttributeError: 'list' object has no attribute 'gvalue_to_fitness'. looking at vscode hover tooltip-- seems params isn't a variable of class ModelParams, like it is in kevin's example??? (not sure if that's the right interpretation of what I'm seeing, either)
+    #print(params)
+
+    provenance = json.loads(ts.ts.provenance(0).record)
+    print(provenance)
 
 if __name__ == "__main__":
     # build our parser
