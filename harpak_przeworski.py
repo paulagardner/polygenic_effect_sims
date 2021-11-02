@@ -85,11 +85,11 @@ def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
         "nregions": [],
         "recregions": [fwdpy11.PoissonInterval(0, 1.00, 1e-3)],
         "rates": (0, MU, None),
-        "gvalue": [
+        "gvalue": 
             fwdpy11.Additive(
                 2, fwdpy11.GSS(POPT, VS), fwdpy11.GaussianNoise(E_SD, E_MEAN)
             )
-        ],
+        ,
         "prune_selected": False,
         "simlen": 10 * N,
     }
@@ -115,7 +115,7 @@ def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
 
 
 
-def write_treefile(pop: fwdpy11.DiploidPopulation, seed: int, args: argparse.Namespace):
+def write_treefile(*, pop: fwdpy11.DiploidPopulation, seed: int, params: fwdpy11.ModelParams, args: argparse.Namespace): #note that technically, in line 159 below, you don't need the star here to be able to use the args in any order IF you've named them. However, the converse isn't true- once you have the star here, you need to have non-positional arguments when the fuction is called. 
     ts = pop.dump_tables_to_tskit(# The actual model params
     model_params= params, #why is it not necessary to have params as an argument in write_treefile, like seed or args? from my understanding, we're defining it here, and model_params is of class ModelParams(so far as I can tell)
 
@@ -128,13 +128,20 @@ def write_treefile(pop: fwdpy11.DiploidPopulation, seed: int, args: argparse.Nam
     ts.ts.dump(args.treefile)
 
 
-    print(ts.model_params.gvalue.gvalue_to_fitness.POPT) #AttributeError: 'list' object has no attribute 'gvalue_to_fitness'. looking at vscode hover tooltip-- seems params isn't a variable of class ModelParams, like it is in kevin's example??? (not sure if that's the right interpretation of what I'm seeing, either)
+    #print(ts.model_params.gvalue.gvalue_to_fitness.VS) #AttributeError: 'list' object has no attribute 'gvalue_to_fitness'. looking at vscode hover tooltip-- seems params isn't a variable of class ModelParams, like it is in kevin's example??? (not sure if that's the right interpretation of what I'm seeing, either)
     #print(params)
 
+
+    print(ts.model_params)
+    print()
     provenance = json.loads(ts.ts.provenance(0).record)
     print(provenance)
+    print()
+    print(ts.model_params.gvalue.gvalue_to_fitness.VS)
+    print(ts.model_params.gvalue.gvalue_to_fitness.optimum)
 
-if __name__ == "__main__":
+
+def main():
     # build our parser
     parser = make_parser()
 
@@ -148,4 +155,10 @@ if __name__ == "__main__":
     pop,params,seed = run_sim(args) #if you keep as before, where pop = run_sim, AttributeError: 'function' object has no attribute 'params'
 
     # write the output to a tskit "trees" file
-    write_treefile(pop, seed, args)
+    print("params is", type(params))
+    write_treefile(pop=pop, params=params, seed=seed, args=args)
+
+
+
+if __name__ == "__main__":
+    main()
