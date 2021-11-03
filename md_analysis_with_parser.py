@@ -2,6 +2,9 @@ import argparse
 import sys
 import fwdpy11
 import numpy as np
+import json
+
+from tskit.trees import TreeSequence # not sure if necessary
 
 # example usage: python md_analysis_with_parser.py harpak_przeworski.trees --metadata_output harpak_przeworski.txt or
 # OR (positional argument style) python md_analysis_with_parser.py  --metadata_output harpak_przeworski.txt harpak_przeworski.trees*  . It seems if you only have one positional argument it doesn't matter where it goes. If the parser no longer has treefile as a positional argument, this will change.
@@ -57,23 +60,27 @@ def fitness_phenotype_summary(args: argparse.Namespace) -> fwdpy11.tskit_tools.l
         # trying to fomat following this:
         output_file.write(
             # f"Treefile name\t\t\tMean fitness\t\t\tMean genetic value\t\t\tMean environmental value\t\t\tMean phenotype")
-            f"{'Treefile_name':<30} {'Mean_fitness':<30} {'Mean_genetic_value':<30} {'Mean_environmental_value':<30} {'Mean_phenotype':<30}"
+            f"{'Population_optimum':<30} {'Treefile_name':<30} {'Mean_fitness':<30} {'Mean_genetic_value':<30} {'Mean_environmental_value':<30} {'Mean_phenotype':<30}"
         )  # why formatting with underscores? If not, the way my plotting_metadata.r function works doesn't seem to read the headers in correctly
 
         input_file = args.treefile
         for input_file in args.treefile:
             ts = fwdpy11.tskit_tools.load(input_file)
-            ind_md = ts.decode_individual_metadata()
+            ind_md = ts.decode_individual_metadata() 
             # fitness = np.zeros(len(ind_md))
             # phenotype = np.zeros(len(ind_md))
             # genetic_value = np.zeros(len(ind_md))
             # environmental_value = np.zeros(len(ind_md))
 
-            fitness = np.array([md.w for md in ind_md])
+
+            popt = ts.model_params.gvalue.gvalue_to_fitness.optimum #oddly enough, this works well enough for one loop, but raises an AttributeError and the loop doesn't repeat
+            fitness = np.array([md.w for md in ind_md])                                                                                                                
             genetic_value = np.array([md.g for md in ind_md])
             environmental_value = np.array([md.e for md in ind_md])
             phenotype = np.array([md.g + md.e for md in ind_md])
             #options for metadata parameters: https://molpopgen.github.io/fwdpy11/pages/tskit_tools.html#fwdpy11.tskit_tools.DiploidMetadata
+
+
 
             # Originally was using a for() loop of this format, but requires more lines:
             # fitness = np.zeros(len(ind_md))
@@ -91,13 +98,21 @@ def fitness_phenotype_summary(args: argparse.Namespace) -> fwdpy11.tskit_tools.l
             #   phenotype[i] = md.g + md.e
 
             output_file.write(
-                f"\n{input_file:<30} {fitness.mean():<30} {genetic_value.mean():<30} {environmental_value.mean():<30} {phenotype.mean():<30}"  # for reference #http://cis.bentley.edu/sandbox/wp-content/uploads/Documentation-on-f-strings.pdf
+                f"\n{popt:<30} {input_file:<30} {fitness.mean():<30} {genetic_value.mean():<30} {environmental_value.mean():<30} {phenotype.mean():<30}"  # for reference #http://cis.bentley.edu/sandbox/wp-content/uploads/Documentation-on-f-strings.pdf
             )
             
         output_file.write(f"\n") # why the newline character at the end? If you want to process things in R, you get a warning message "incomplete final line found" if you don't include it, and the headers are all wonky
+        
+
+        
         print(
-            f"{'Treefile name':<30} {'Mean fitness':<30} {'Mean genetic value':<30} {'Mean environmental value':<30} {'Mean phenotype':<30}\n{input_file:<30} {fitness.mean():<30} {genetic_value.mean():<30} {environmental_value.mean():<30} {phenotype.mean():<30}"
-        )
+                f"{'Treefile name':<30} {'Mean fitness':<30} {'Mean genetic value':<30} {'Mean environmental value':<30} {'Mean phenotype':<30}"
+            )
+        for input_file in args.treefile:
+            print(
+                f"{input_file:<30} {fitness.mean():<30} {genetic_value.mean():<30} {environmental_value.mean():<30} {phenotype.mean():<30}"
+            )
+            
 
         # f"{args.treefile}" #https://zetcode.com/python/argparse/ include args.treefile as your column name
 
@@ -107,7 +122,7 @@ def fitness_phenotype_summary(args: argparse.Namespace) -> fwdpy11.tskit_tools.l
 # def write_nextfile(args: argparse.Namespace): #not really needed here,
 
 
-if __name__ == "__main__":
+def main():
     # build our parser
     parser = make_parser()
 
@@ -116,10 +131,13 @@ if __name__ == "__main__":
 
     # check input
     validate_args(args)
-
     # do the function we want it to do (requires that function has a name)
     # printvariable = fitness_phenotype_summary(args) #variable not necessary if you're not passing it to the next function(?)
     fitness_phenotype_summary(args)
 
     # write the output to a file that can be analysed downstream
     # write_nextfile(printvariable, args) #may not be necessary, as you've combined the process and write function
+
+if __name__ == "__main__":
+    main()
+
