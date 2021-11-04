@@ -128,9 +128,6 @@ def write_treefile(*, pop: fwdpy11.DiploidPopulation, seed: int, params: fwdpy11
     ts.ts.dump(args.treefile)
 
 
-    #print(ts.model_params.gvalue.gvalue_to_fitness.VS) #AttributeError: 'list' object has no attribute 'gvalue_to_fitness'. looking at vscode hover tooltip-- seems params isn't a variable of class ModelParams, like it is in kevin's example??? (not sure if that's the right interpretation of what I'm seeing, either)
-    #print(params)
-
 
     print(ts.model_params)
     print()
