@@ -57,23 +57,21 @@ def fitness_phenotype_summary(args: argparse.Namespace) -> fwdpy11.tskit_tools.l
     with open(
         args.metadata_output, "w"
     ) as output_file:  #'w' here is just the standard python switch(?) for write. Metadata_output is your parser argument, in the make_parser function
-        # trying to fomat following this:
         output_file.write(
-            # f"Treefile name\t\t\tMean fitness\t\t\tMean genetic value\t\t\tMean environmental value\t\t\tMean phenotype")
             f"{'Population_optimum':<30} {'Treefile_name':<30} {'Mean_fitness':<30} {'Mean_genetic_value':<30} {'Mean_environmental_value':<30} {'Mean_phenotype':<30}"
         )  # why formatting with underscores? If not, the way my plotting_metadata.r function works doesn't seem to read the headers in correctly
 
         input_file = args.treefile
         for input_file in args.treefile:
+
             ts = fwdpy11.tskit_tools.load(input_file)
-            ind_md = ts.decode_individual_metadata() 
-            # fitness = np.zeros(len(ind_md))
-            # phenotype = np.zeros(len(ind_md))
-            # genetic_value = np.zeros(len(ind_md))
-            # environmental_value = np.zeros(len(ind_md))
-
-
             popt = ts.model_params.gvalue.gvalue_to_fitness.optimum #oddly enough, this works well enough for one loop, but raises an AttributeError and the loop doesn't repeat
+            #if 'model_params' not in ts.metadata:
+                #raise RuntimeError("tree sequence does not contain the model parameters")
+
+
+            ind_md = ts.decode_individual_metadata() 
+            
             fitness = np.array([md.w for md in ind_md])                                                                                                                
             genetic_value = np.array([md.g for md in ind_md])
             environmental_value = np.array([md.e for md in ind_md])
@@ -97,20 +95,25 @@ def fitness_phenotype_summary(args: argparse.Namespace) -> fwdpy11.tskit_tools.l
 
             #   phenotype[i] = md.g + md.e
 
+            
             output_file.write(
                 f"\n{popt:<30} {input_file:<30} {fitness.mean():<30} {genetic_value.mean():<30} {environmental_value.mean():<30} {phenotype.mean():<30}"  # for reference #http://cis.bentley.edu/sandbox/wp-content/uploads/Documentation-on-f-strings.pdf
             )
             
+
+            
         output_file.write(f"\n") # why the newline character at the end? If you want to process things in R, you get a warning message "incomplete final line found" if you don't include it, and the headers are all wonky
-        
+
+    
 
         
         print(
-                f"{'Treefile name':<30} {'Mean fitness':<30} {'Mean genetic value':<30} {'Mean environmental value':<30} {'Mean phenotype':<30}"
+                f"{'Population_optimum':<30} {'Treefile_name':<30} {'Mean_fitness':<30} {'Mean_genetic_value':<30} {'Mean_environmental_value':<30} {'Mean_phenotype':<30}"
             )
+        
         for input_file in args.treefile:
             print(
-                f"{input_file:<30} {fitness.mean():<30} {genetic_value.mean():<30} {environmental_value.mean():<30} {phenotype.mean():<30}"
+                f"\n{popt:<30} {input_file:<30} {fitness.mean():<30} {genetic_value.mean():<30} {environmental_value.mean():<30} {phenotype.mean():<30}"
             )
             
 
