@@ -58,7 +58,7 @@ def fitness_phenotype_summary(args: argparse.Namespace) -> fwdpy11.tskit_tools.l
         args.metadata_output, "w"
     ) as output_file:  #'w' here is just the standard python switch(?) for write. Metadata_output is your parser argument, in the make_parser function
         output_file.write(
-            f"{'Population_optimum':<30} {'Treefile_name':<30} {'Mean_fitness':<30} {'Mean_genetic_value':<30} {'Mean_environmental_value':<30} {'Mean_phenotype':<30}"
+            f"{'Treefile_name':<30} {'Population_optimum':<30} {'strength_stabilizing_selection':<30} {'Mean_fitness':<30} {'Mean_genetic_value':<30} {'Mean_environmental_value':<30} {'Mean_phenotype':<30}"
         )  # why formatting with underscores? If not, the way my plotting_metadata.r function works doesn't seem to read the headers in correctly
 
         input_file = args.treefile
@@ -73,6 +73,7 @@ def fitness_phenotype_summary(args: argparse.Namespace) -> fwdpy11.tskit_tools.l
 
 
             popt = ts.model_params.gvalue.gvalue_to_fitness.optimum 
+            vs = ts.model_params.gvalue.gvalue_to_fitness.VS
 
             ind_md = ts.decode_individual_metadata() 
 
@@ -105,7 +106,7 @@ def fitness_phenotype_summary(args: argparse.Namespace) -> fwdpy11.tskit_tools.l
             #print(ts.ts.metadata) #figure out why this works when ts.ts.metadata and not ts.metadata (AttributeError: 'WrappedTreeSequence' object has no attribute 'metadata'). Note, same thing for 'if' statement on model_params above
             
             output_file.write(
-                f"\n{popt:<30} {input_file:<30} {fitness.mean():<30} {genetic_value.mean():<30} {environmental_value.mean():<30} {phenotype.mean():<30}"  # for reference #http://cis.bentley.edu/sandbox/wp-content/uploads/Documentation-on-f-strings.pdf
+                f"\n{input_file:<30} {popt:<30} {vs:<30} {fitness.mean():<30} {genetic_value.mean():<30} {environmental_value.mean():<30} {phenotype.mean():<30}"  # for reference #http://cis.bentley.edu/sandbox/wp-content/uploads/Documentation-on-f-strings.pdf
                 
             )
 
@@ -119,12 +120,12 @@ def fitness_phenotype_summary(args: argparse.Namespace) -> fwdpy11.tskit_tools.l
         
         
         print(
-                f"{'Population_optimum':<30} {'Treefile_name':<30} {'Mean_fitness':<30} {'Mean_genetic_value':<30} {'Mean_environmental_value':<30} {'Mean_phenotype':<30}"
-            )
+                f"{'Treefile_name':<30} {'Population_optimum':<30} {'strength_stabilizing_selection':<30} {'Mean_fitness':<30} {'Mean_genetic_value':<30} {'Mean_environmental_value':<30} {'Mean_phenotype':<30}"
+        )
         
         for input_file in args.treefile:
             print(
-                f"\n{popt:<30} {input_file:<30} {fitness.mean():<30} {genetic_value.mean():<30} {environmental_value.mean():<30} {phenotype.mean():<30}"
+                f"{input_file:<30} {popt:<30} {vs:<30} {fitness.mean():<30} {genetic_value.mean():<30} {environmental_value.mean():<30} {phenotype.mean():<30}"
             )
   
 
