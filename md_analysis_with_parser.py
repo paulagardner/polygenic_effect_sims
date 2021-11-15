@@ -65,12 +65,18 @@ def fitness_phenotype_summary(args: argparse.Namespace) -> fwdpy11.tskit_tools.l
         for input_file in args.treefile:
 
             ts = fwdpy11.tskit_tools.load(input_file)
-            popt = ts.model_params.gvalue.gvalue_to_fitness.optimum #oddly enough, this works well enough for one loop, but raises an AttributeError and the loop doesn't repeat
-            #if 'model_params' not in ts.metadata:
-                #raise RuntimeError("tree sequence does not contain the model parameters")
 
+            if 'model_params' not in ts.ts.metadata:    
+                raise RuntimeError("tree sequence provided does not contain the model parameters") 
+                #I am getting an attributeerror if this is in the script, even if it works otherwise (ie I am providing correctly formatted input files. be careful of that!) This also was not only not working, but actively keeping the script from working, when it was just calling ts.metadata without the wrapper(?)
+                #point: be able to catch errors from providing inputs with incorrect formatting (e.g. made using py script that didn't write dictionaries)
+
+
+            popt = ts.model_params.gvalue.gvalue_to_fitness.optimum 
 
             ind_md = ts.decode_individual_metadata() 
+
+
             
             fitness = np.array([md.w for md in ind_md])                                                                                                                
             genetic_value = np.array([md.g for md in ind_md])
@@ -78,7 +84,7 @@ def fitness_phenotype_summary(args: argparse.Namespace) -> fwdpy11.tskit_tools.l
             phenotype = np.array([md.g + md.e for md in ind_md])
             #options for metadata parameters: https://molpopgen.github.io/fwdpy11/pages/tskit_tools.html#fwdpy11.tskit_tools.DiploidMetadata
 
-
+        
 
             # Originally was using a for() loop of this format, but requires more lines:
             # fitness = np.zeros(len(ind_md))
@@ -95,17 +101,22 @@ def fitness_phenotype_summary(args: argparse.Namespace) -> fwdpy11.tskit_tools.l
 
             #   phenotype[i] = md.g + md.e
 
+            #print(ts.model_params)
+            #print(ts.ts.metadata) #figure out why this works when ts.ts.metadata and not ts.metadata (AttributeError: 'WrappedTreeSequence' object has no attribute 'metadata'). Note, same thing for 'if' statement on model_params above
             
             output_file.write(
                 f"\n{popt:<30} {input_file:<30} {fitness.mean():<30} {genetic_value.mean():<30} {environmental_value.mean():<30} {phenotype.mean():<30}"  # for reference #http://cis.bentley.edu/sandbox/wp-content/uploads/Documentation-on-f-strings.pdf
+                
             )
-            
 
+            
+            
+            
             
         output_file.write(f"\n") # why the newline character at the end? If you want to process things in R, you get a warning message "incomplete final line found" if you don't include it, and the headers are all wonky
 
     
-
+        
         
         print(
                 f"{'Population_optimum':<30} {'Treefile_name':<30} {'Mean_fitness':<30} {'Mean_genetic_value':<30} {'Mean_environmental_value':<30} {'Mean_phenotype':<30}"
@@ -115,7 +126,7 @@ def fitness_phenotype_summary(args: argparse.Namespace) -> fwdpy11.tskit_tools.l
             print(
                 f"\n{popt:<30} {input_file:<30} {fitness.mean():<30} {genetic_value.mean():<30} {environmental_value.mean():<30} {phenotype.mean():<30}"
             )
-            
+  
 
         # f"{args.treefile}" #https://zetcode.com/python/argparse/ include args.treefile as your column name
 
@@ -136,6 +147,7 @@ def main():
     validate_args(args)
     # do the function we want it to do (requires that function has a name)
     # printvariable = fitness_phenotype_summary(args) #variable not necessary if you're not passing it to the next function(?)
+
     fitness_phenotype_summary(args)
 
     # write the output to a file that can be analysed downstream
