@@ -78,8 +78,8 @@ def fitness_phenotype_summary(args: argparse.Namespace) -> fwdpy11.tskit_tools.l
 
             ind_md = ts.decode_individual_metadata() 
 
-
-            index = list(enumerate(input_file))
+            filename = input_file.splitlines() #this isn't quite it, but getting closer
+            index = list(enumerate(filename))
 
             print(
                 f"{'individual':<30}{'Treefile_name':<30} {'Population_optimum':<30} {'strength_stabilizing_selection':<30} {'ind_fitness':<30} {'ind_genetic_value':<30} {'ind_environmental_value':<30} {'ind_phenotype':<30}")
@@ -101,7 +101,7 @@ def fitness_phenotype_summary(args: argparse.Namespace) -> fwdpy11.tskit_tools.l
                 # for reference #http://cis.bentley.edu/sandbox/wp-content/uploads/Documentation-on-f-strings.pdf
 
                 print(
-                    f"{ind:<30} {input_file:<30} {popt:<30} {vs:<30} {fitness[ind]:<30} {genetic_value[ind]:<30} {environmental_value[ind]:<30} {phenotype[ind]:<30}"
+                    f" {ind:<30} {input_file:<30} {popt:<30} {vs:<30} {fitness[ind]:<30} {genetic_value[ind]:<30} {environmental_value[ind]:<30} {phenotype[ind]:<30}"
                 ) #is there a way to get just a subset? Don't know how to slice something where  the 
 
                 
