@@ -59,10 +59,13 @@ def fitness_phenotype_summary(args: argparse.Namespace) -> fwdpy11.tskit_tools.l
         args.metadata_output, "w"
     ) as output_file:  #'w' here is just the standard python switch(?) for write. Metadata_output is your parser argument, in the make_parser function
         output_file.write(
-            f"{'individual':<30}{'Treefile_name':<30} {'Population_optimum':<30} {'strength_stabilizing_selection':<30} {'ind_fitness':<30} {'ind_genetic_value':<30} {'ind_environmental_value':<30} {'ind_phenotype':<30}"
-        )  # why formatting with underscores? If not, the way my plotting_metadata.r function works doesn't seem to read the headers in correctly
+            f"{'individual':<10} {'count':<10} {'Treefile_name':<30} {'Population_optimum':<30} {'strength_stabilizing_selection':<30} {'ind_fitness':<30} {'ind_genetic_value':<30} {'ind_environmental_value':<30} {'ind_phenotype':<30}")  # why formatting with underscores? If not, the way my plotting_metadata.r function works doesn't seem to read the headers in correctly
 
         input_file = args.treefile
+        
+        filename = [input_file]
+        print(filename)
+
         for input_file in args.treefile:
 
             ts = fwdpy11.tskit_tools.load(input_file)
@@ -78,11 +81,24 @@ def fitness_phenotype_summary(args: argparse.Namespace) -> fwdpy11.tskit_tools.l
 
             ind_md = ts.decode_individual_metadata() 
 
-            filename = input_file.splitlines() #this isn't quite it, but getting closer
-            index = list(enumerate(filename))
+            #filename = input_file.splitlines() #this isn't quite it, but getting closer
+            
+
+            #for count, input_file in enumerate(input_file):
+                #print(input_file)
+
+            for count, filename in enumerate(filename):
+                print(count)
+            
+
+            #in enumerate 
+             
+
+
+
 
             print(
-                f"{'individual':<30}{'Treefile_name':<30} {'Population_optimum':<30} {'strength_stabilizing_selection':<30} {'ind_fitness':<30} {'ind_genetic_value':<30} {'ind_environmental_value':<30} {'ind_phenotype':<30}")
+                f"{'individual':<10} {'count':<10} {'Treefile_name':<30} {'Population_optimum':<30} {'strength_stabilizing_selection':<30} {'ind_fitness':<30} {'ind_genetic_value':<30} {'ind_environmental_value':<30} {'ind_phenotype':<30}")
 
             fitness = np.array([md.w for md in ind_md])                                                                                                                
             genetic_value = np.array([md.g for md in ind_md])
@@ -92,17 +108,16 @@ def fitness_phenotype_summary(args: argparse.Namespace) -> fwdpy11.tskit_tools.l
             #options for metadata parameters: https://molpopgen.github.io/fwdpy11/pages/tskit_tools.html#fwdpy11.tskit_tools.DiploidMetadata
 
             for ind, ind_md in enumerate(ind_md): 
-                '''for index, value in enumerate(input_file,1):
-                    print(index) # for when you're wanting to use file indexes instead of the filenames''' 
-
 
                 output_file.write(
-                f"\n{ind:<30} {input_file:<30} {popt:<30} {vs:<30} {fitness[ind]:<30} {genetic_value[ind]:<30} {environmental_value[ind]:<30} {phenotype[ind]:<30}")
+                f"\n{ind:<10} {count:<10} {input_file:<30} {popt:<30} {vs:<30} {fitness[ind]:<30} {genetic_value[ind]:<30} {environmental_value[ind]:<30} {phenotype[ind]:<30}")
                 # for reference #http://cis.bentley.edu/sandbox/wp-content/uploads/Documentation-on-f-strings.pdf
 
                 print(
-                    f" {ind:<30} {input_file:<30} {popt:<30} {vs:<30} {fitness[ind]:<30} {genetic_value[ind]:<30} {environmental_value[ind]:<30} {phenotype[ind]:<30}"
+                    f"\n{ind:<10} {count:<10} {input_file:<30} {popt:<30} {vs:<30} {fitness[ind]:<30} {genetic_value[ind]:<30} {environmental_value[ind]:<30} {phenotype[ind]:<30}"
                 ) #is there a way to get just a subset? Don't know how to slice something where  the 
+
+            
 
                 
 
@@ -127,27 +142,18 @@ def fitness_phenotype_summary(args: argparse.Namespace) -> fwdpy11.tskit_tools.l
             #print()
             #print(label)
             #print(ts.ts.metadata) #figure out why this works when ts.ts.metadata and not ts.metadata (AttributeError: 'WrappedTreeSequence' object has no attribute 'metadata'). Note, same thing for 'if' statement on model_params above
-            print(index)
+            #print(input_file)
+            #print(filename)
             
+            #print(indices)
+            #print(index)
 
             
-            
+
             
             
         output_file.write(f"\n") # why the newline character at the end? If you want to process things in R, you get a warning message "incomplete final line found" if you don't include it, and the headers are all wonky
 
-            
-        
-        '''
-        print(
-                f"{'individual':<30}{'Treefile_name':<30} {'Population_optimum':<30} {'strength_stabilizing_selection':<30} {'ind_fitness':<30} {'ind_genetic_value':<30} {'ind_environmental_value':<30} {'ind_phenotype':<30}"
-        )
-        
-        for input_file in args.treefile:
-            print(
-                f"{ind:<30}{input_file:<30} {popt:<30} {vs:<30} {fitness.mean():<30} {genetic_value.mean():<30} {environmental_value.mean():<30} {phenotype.mean():<30}"
-            )
-        '''
         # f"{args.treefile}" #https://zetcode.com/python/argparse/ include args.treefile as your column name
 
         # you want to write to a file to look at and for future downstream analysis
