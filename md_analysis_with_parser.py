@@ -58,7 +58,7 @@ def fitness_phenotype_summary(args: argparse.Namespace):
         args.metadata_output, "w"
     ) as output_file:  #'w' here is just the standard python switch(?) for write. Metadata_output is your parser argument, in the make_parser function
         output_file.write(
-            f"{'individual'}\t{'count'}\t{'Treefile_name'}\t{'Population_optimum'}\t{'strength_stabilizing_selection'}\t{'mean_E'}\t{'ind_fitness'}\t{'ind_genetic_value'}\t{'ind_environmental_value'}\t{'ind_phenotype'}")  # why formatting with underscores? If not, the way my plotting_metadata.r function works doesn't seem to read the headers in correctly
+            f"{'individual'}\t{'count'}\t{'Treefile_name'}\t{'Population_optimum'}\t{'strength_stabilizing_selection'}\t{'mean_E'}\t{'e_SD'}\t{'ind_fitness'}\t{'ind_genetic_value'}\t{'ind_environmental_value'}\t{'ind_phenotype'}")  # why formatting with underscores? If not, the way my plotting_metadata.r function works doesn't seem to read the headers in correctly
 
         input_file = args.treefile
         
@@ -80,6 +80,7 @@ def fitness_phenotype_summary(args: argparse.Namespace):
                 print(count)
             provenance = json.loads(ts.ts.provenance(0).record) #MEAN_E is in the provenance--- can't remember why
             e_mu= (provenance['parameters']['meanE'])
+            e_sd= (provenance['parameters']['E_SD'])
             #e_mu = parameters['meanE'] #I know this can't be the best way to do this, but...
             
 
@@ -91,16 +92,16 @@ def fitness_phenotype_summary(args: argparse.Namespace):
             #options for metadata parameters: https://molpopgen.github.io/fwdpy11/pages/tskit_tools.html#fwdpy11.tskit_tools.DiploidMetadata
 
             print(
-                f"{'individual':<10} {'count':<10} {'Treefile_name':<30} {'Population_optimum':<30} {'strength_stabilizing_selection':<30} {'mean_E':<10} {'ind_fitness':<30} {'ind_genetic_value':<30} {'ind_environmental_value':<30} {'ind_phenotype':<30}")
+                f"{'individual':<10} {'count':<10} {'Treefile_name':<30} {'Population_optimum':<30} {'strength_stabilizing_selection':<30} {'mean_E':<10} {'e_SD':<10} {'ind_fitness':<30} {'ind_genetic_value':<30} {'ind_environmental_value':<30} {'ind_phenotype':<30}")
 
             for ind, ind_md in enumerate(ind_md): 
 
                 output_file.write(
-                f"\n{ind}\t{count}\t{input_file}\t{popt}\t{vs}\t{e_mu}\t{fitness[ind]}\t{genetic_value[ind]}\t{environmental_value[ind]}\t {phenotype[ind]}")
+                f"\n{ind}\t{count}\t{input_file}\t{popt}\t{vs}\t{e_mu}\t{e_sd}\t{fitness[ind]}\t{genetic_value[ind]}\t{environmental_value[ind]}\t {phenotype[ind]}")
                 # for reference #http://cis.bentley.edu/sandbox/wp-content/uploads/Documentation-on-f-strings.pdf
 
                 print(
-                    f"\n{ind:<10} {count:<10} {input_file:<30} {popt:<30} {vs:<30} {e_mu:<10}{fitness[ind]:<30} {genetic_value[ind]:<30} {environmental_value[ind]:<30} {phenotype[ind]:<30}"
+                    f"\n{ind:<10} {count:<10} {input_file:<30} {popt:<30} {vs:<30} {e_mu:<10}{e_sd:<10}{fitness[ind]:<30} {genetic_value[ind]:<30} {environmental_value[ind]:<30} {phenotype[ind]:<30}"
                 ) #is there a way to get just a subset? Don't know how to slice something where  the 
 
             
@@ -123,10 +124,10 @@ def fitness_phenotype_summary(args: argparse.Namespace):
             #   phenotype[i] = md.g + md.e
 
             print(ts.model_params)
-            provenance = json.loads(ts.ts.provenance(0).record) #MEAN_E is in the provenance--- can't remember why
-            print(provenance)
-            print()
-            print(e_mu)
+            #provenance = json.loads(ts.ts.provenance(0).record) #MEAN_E is in the provenance--- can't remember why
+            #print(provenance)
+            #print()
+            #print(e_mu)
             #print()
             #print(label)
             #print(ts.ts.metadata) #figure out why this works when ts.ts.metadata and not ts.metadata (AttributeError: 'WrappedTreeSequence' object has no attribute 'metadata'). Note, same thing for 'if' statement on model_params above

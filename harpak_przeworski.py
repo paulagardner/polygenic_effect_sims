@@ -111,17 +111,17 @@ def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
 
     # h2 = md["g"].var() / ((md["g"] + md["e"]).var())
 
-    return pop, params, seed, E_MEAN # if you don't return pop you'll get an error in write_treefile: 'AttributeError: 'NoneType' object has no attribute 'dump_tables_to_tskit'
+    return pop, params, seed, E_MEAN, E_SD # if you don't return pop you'll get an error in write_treefile: 'AttributeError: 'NoneType' object has no attribute 'dump_tables_to_tskit'
 
 
 
-def write_treefile(*, pop: fwdpy11.DiploidPopulation, seed: int, params: fwdpy11.ModelParams, args: argparse.Namespace, E_MEAN: int): #note that technically, in line 159 below, you don't need the star here to be able to use the args in any order IF you've named them. However, the converse isn't true- once you have the star here, you need to have non-positional arguments when the fuction is called. 
+def write_treefile(*, pop: fwdpy11.DiploidPopulation, seed: int, params: fwdpy11.ModelParams, args: argparse.Namespace, E_MEAN: int, E_SD:int): #note that technically, in line 159 below, you don't need the star here to be able to use the args in any order IF you've named them. However, the converse isn't true- once you have the star here, you need to have non-positional arguments when the fuction is called. 
     ts = pop.dump_tables_to_tskit(# The actual model params
     model_params= params, #why is it not necessary to have params as an argument in write_treefile, like seed or args? from my understanding, we're defining it here, and model_params is of class ModelParams(so far as I can tell)
 
     # Any dict you want.  Some of what I'm putting here is redundant...
     # This dict will get written to the "provenance" table
-    parameters={"seed": seed, "simplification_interval": 100, "meanE": E_MEAN}, #need to change meanE here to be calling E_MEAN
+    parameters={"seed": seed, "simplification_interval": 100, "meanE": E_MEAN, "E_SD": E_SD}, 
     wrapped=True,)
     # The ts is a fwdpy11.WrappedTreeSequence.
     # To dump it, access the underling tskit.TreeSequence
@@ -149,11 +149,11 @@ def main():
     validate_args(args)
 
     # evolve our population
-    pop,params,seed,E_MEAN= run_sim(args) #if you keep as before, where pop = run_sim, AttributeError: 'function' object has no attribute 'params'
+    pop,params,seed,E_MEAN,E_SD= run_sim(args) #if you keep as before, where pop = run_sim, AttributeError: 'function' object has no attribute 'params'
 
     # write the output to a tskit "trees" file
     print("params is", type(params))
-    write_treefile(pop=pop, params=params, seed=seed, args=args, E_MEAN=E_MEAN)
+    write_treefile(pop=pop, params=params, seed=seed, args=args, E_MEAN=E_MEAN, E_SD=E_SD)
 
 
 
