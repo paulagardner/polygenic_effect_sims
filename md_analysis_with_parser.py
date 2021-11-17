@@ -79,7 +79,7 @@ def fitness_phenotype_summary(args: argparse.Namespace) -> fwdpy11.tskit_tools.l
             ind_md = ts.decode_individual_metadata() 
 
 
-
+            index = list(enumerate(input_file))
 
             print(
                 f"{'individual':<30}{'Treefile_name':<30} {'Population_optimum':<30} {'strength_stabilizing_selection':<30} {'ind_fitness':<30} {'ind_genetic_value':<30} {'ind_environmental_value':<30} {'ind_phenotype':<30}")
@@ -93,7 +93,7 @@ def fitness_phenotype_summary(args: argparse.Namespace) -> fwdpy11.tskit_tools.l
 
             for ind, ind_md in enumerate(ind_md): 
                 '''for index, value in enumerate(input_file,1):
-                    print(index) # for when you're wanting to use file indexes instead of the filenames''' #does interesting stuff, but not what you want.
+                    print(index) # for when you're wanting to use file indexes instead of the filenames''' 
 
 
                 output_file.write(
@@ -103,6 +103,8 @@ def fitness_phenotype_summary(args: argparse.Namespace) -> fwdpy11.tskit_tools.l
                 print(
                     f"{ind:<30} {input_file:<30} {popt:<30} {vs:<30} {fitness[ind]:<30} {genetic_value[ind]:<30} {environmental_value[ind]:<30} {phenotype[ind]:<30}"
                 ) #is there a way to get just a subset? Don't know how to slice something where  the 
+
+                
 
             # Originally was using a for() loop of this format, but requires more lines:
             # fitness = np.zeros(len(ind_md))
@@ -125,7 +127,7 @@ def fitness_phenotype_summary(args: argparse.Namespace) -> fwdpy11.tskit_tools.l
             #print()
             #print(label)
             #print(ts.ts.metadata) #figure out why this works when ts.ts.metadata and not ts.metadata (AttributeError: 'WrappedTreeSequence' object has no attribute 'metadata'). Note, same thing for 'if' statement on model_params above
-            
+            print(index)
             
 
             
