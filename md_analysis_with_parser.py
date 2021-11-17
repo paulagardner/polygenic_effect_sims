@@ -1,10 +1,11 @@
 import argparse
+from os import lseek
 import sys
 import fwdpy11
 import numpy as np
 import json
 
-from tskit.trees import TreeSequence # not sure if necessary
+from tskit.trees import Provenance, TreeSequence # not sure if necessary
 
 # example usage: python md_analysis_with_parser.py harpak_przeworski.trees --metadata_output harpak_przeworski.txt or
 # OR (positional argument style) python md_analysis_with_parser.py  --metadata_output harpak_przeworski.txt harpak_przeworski.trees*  . It seems if you only have one positional argument it doesn't matter where it goes. If the parser no longer has treefile as a positional argument, this will change.
@@ -58,7 +59,7 @@ def fitness_phenotype_summary(args: argparse.Namespace) -> fwdpy11.tskit_tools.l
         args.metadata_output, "w"
     ) as output_file:  #'w' here is just the standard python switch(?) for write. Metadata_output is your parser argument, in the make_parser function
         output_file.write(
-            f"{'Treefile_name':<30} {'Population_optimum':<30} {'strength_stabilizing_selection':<30} {'Mean_fitness':<30} {'Mean_genetic_value':<30} {'Mean_environmental_value':<30} {'Mean_phenotype':<30}"
+            f"{'individual':<30}{'Treefile_name':<30} {'Population_optimum':<30} {'strength_stabilizing_selection':<30} {'ind_fitness':<30} {'ind_genetic_value':<30} {'ind_environmental_value':<30} {'ind_phenotype':<30}"
         )  # why formatting with underscores? If not, the way my plotting_metadata.r function works doesn't seem to read the headers in correctly
 
         input_file = args.treefile
@@ -78,14 +79,30 @@ def fitness_phenotype_summary(args: argparse.Namespace) -> fwdpy11.tskit_tools.l
             ind_md = ts.decode_individual_metadata() 
 
 
-            
+
+
+            print(
+                f"{'individual':<30}{'Treefile_name':<30} {'Population_optimum':<30} {'strength_stabilizing_selection':<30} {'ind_fitness':<30} {'ind_genetic_value':<30} {'ind_environmental_value':<30} {'ind_phenotype':<30}")
+
             fitness = np.array([md.w for md in ind_md])                                                                                                                
             genetic_value = np.array([md.g for md in ind_md])
             environmental_value = np.array([md.e for md in ind_md])
+            #label = np.array([md.label for md in ind_md]) #note that you never wrote into the dictionaries or provenance the N, so you will have to remember to put hat somewhere if it matters
             phenotype = np.array([md.g + md.e for md in ind_md])
             #options for metadata parameters: https://molpopgen.github.io/fwdpy11/pages/tskit_tools.html#fwdpy11.tskit_tools.DiploidMetadata
 
-        
+            for ind, ind_md in enumerate(ind_md): 
+                '''for index, value in enumerate(input_file,1):
+                    print(index) # for when you're wanting to use file indexes instead of the filenames''' #does interesting stuff, but not what you want.
+
+
+                output_file.write(
+                f"\n{ind:<30} {input_file:<30} {popt:<30} {vs:<30} {fitness[ind]:<30} {genetic_value[ind]:<30} {environmental_value[ind]:<30} {phenotype[ind]:<30}")
+                # for reference #http://cis.bentley.edu/sandbox/wp-content/uploads/Documentation-on-f-strings.pdf
+
+                print(
+                    f"{ind:<30} {input_file:<30} {popt:<30} {vs:<30} {fitness[ind]:<30} {genetic_value[ind]:<30} {environmental_value[ind]:<30} {phenotype[ind]:<30}"
+                ) #is there a way to get just a subset? Don't know how to slice something where  the 
 
             # Originally was using a for() loop of this format, but requires more lines:
             # fitness = np.zeros(len(ind_md))
@@ -103,12 +120,13 @@ def fitness_phenotype_summary(args: argparse.Namespace) -> fwdpy11.tskit_tools.l
             #   phenotype[i] = md.g + md.e
 
             #print(ts.model_params)
+            #provenance = json.loads(ts.ts.provenance(0).record) #MEAN_E is in the provenance--- can't remember why
+            #print(provenance)
+            #print()
+            #print(label)
             #print(ts.ts.metadata) #figure out why this works when ts.ts.metadata and not ts.metadata (AttributeError: 'WrappedTreeSequence' object has no attribute 'metadata'). Note, same thing for 'if' statement on model_params above
             
-            output_file.write(
-                f"\n{input_file:<30} {popt:<30} {vs:<30} {fitness.mean():<30} {genetic_value.mean():<30} {environmental_value.mean():<30} {phenotype.mean():<30}"  # for reference #http://cis.bentley.edu/sandbox/wp-content/uploads/Documentation-on-f-strings.pdf
-                
-            )
+            
 
             
             
@@ -116,19 +134,18 @@ def fitness_phenotype_summary(args: argparse.Namespace) -> fwdpy11.tskit_tools.l
             
         output_file.write(f"\n") # why the newline character at the end? If you want to process things in R, you get a warning message "incomplete final line found" if you don't include it, and the headers are all wonky
 
-    
+            
         
-        
+        '''
         print(
-                f"{'Treefile_name':<30} {'Population_optimum':<30} {'strength_stabilizing_selection':<30} {'Mean_fitness':<30} {'Mean_genetic_value':<30} {'Mean_environmental_value':<30} {'Mean_phenotype':<30}"
+                f"{'individual':<30}{'Treefile_name':<30} {'Population_optimum':<30} {'strength_stabilizing_selection':<30} {'ind_fitness':<30} {'ind_genetic_value':<30} {'ind_environmental_value':<30} {'ind_phenotype':<30}"
         )
         
         for input_file in args.treefile:
             print(
-                f"{input_file:<30} {popt:<30} {vs:<30} {fitness.mean():<30} {genetic_value.mean():<30} {environmental_value.mean():<30} {phenotype.mean():<30}"
+                f"{ind:<30}{input_file:<30} {popt:<30} {vs:<30} {fitness.mean():<30} {genetic_value.mean():<30} {environmental_value.mean():<30} {phenotype.mean():<30}"
             )
-  
-
+        '''
         # f"{args.treefile}" #https://zetcode.com/python/argparse/ include args.treefile as your column name
 
         # you want to write to a file to look at and for future downstream analysis
