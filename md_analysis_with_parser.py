@@ -125,7 +125,7 @@ def fitness_phenotype_summary(args: argparse.Namespace):
 
             print(ts.model_params)
             #provenance = json.loads(ts.ts.provenance(0).record) #MEAN_E is in the provenance--- can't remember why
-            #print(provenance)
+            print(provenance)
             #print()
             #print(e_mu)
             #print()
@@ -136,6 +136,7 @@ def fitness_phenotype_summary(args: argparse.Namespace):
             
             #print(indices)
             #print(index)
+
 
             
 

@@ -136,6 +136,7 @@ def write_treefile(*, pop: fwdpy11.DiploidPopulation, seed: int, params: fwdpy11
     print()
     print(ts.model_params.gvalue.gvalue_to_fitness.VS)
     print(ts.model_params.gvalue.gvalue_to_fitness.optimum)
+    print()
 
 
 def main():
