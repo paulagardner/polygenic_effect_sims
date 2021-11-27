@@ -5,6 +5,7 @@ import numpy as np
 import json
 import tskit
 
+
 def make_parser() -> argparse.ArgumentParser:
     # make an argument parser that can output help.
     # The __file__ is the full path to this file
@@ -13,7 +14,11 @@ def make_parser() -> argparse.ArgumentParser:
 
     # Add an argument
     parser.add_argument(
-        "--treefile", "-t", type=str, default=None, help="Tree file output name (tskit format)"
+        "--treefile",
+        "-t",
+        type=str,
+        default=None,
+        help="Tree file output name (tskit format)",
     )
 
     # parser.add_argument("--seed", "-s", type=int, default=0, help="Random number seed")
@@ -85,25 +90,25 @@ def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
         "nregions": [],
         "recregions": [fwdpy11.PoissonInterval(0, 1.00, 1e-3)],
         "rates": (0, MU, None),
-        "gvalue": 
-            fwdpy11.Additive(
-                2, fwdpy11.GSS(POPT, VS), fwdpy11.GaussianNoise(E_SD, E_MEAN)
-            )
-        ,
+        "gvalue": fwdpy11.Additive(
+            2, fwdpy11.GSS(POPT, VS), fwdpy11.GaussianNoise(E_SD, E_MEAN)
+        ),
         "prune_selected": False,
         "simlen": 10 * N,
     }
 
     pop = fwdpy11.DiploidPopulation(N, 1.00)
-    
+
     # randint returns numpt.int64, which json doesn't
-    # know how to handle.  So, we turn it 
+    # know how to handle.  So, we turn it
     # to a regular Python int to circumvent this problem.
     seed = int(np.random.randint(0, 100000, 1)[0])
 
     rng = fwdpy11.GSLrng(seed)
- 
-    params = fwdpy11.ModelParams(**paramsdict) #as in example for dict, these can be the same variable. I keep them separate here for legibility
+
+    params = fwdpy11.ModelParams(
+        **paramsdict
+    )  # as in example for dict, these can be the same variable. I keep them separate here for legibility
 
     fwdpy11.evolvets(rng, pop, params, simplification_interval=100)
 
@@ -111,23 +116,39 @@ def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
 
     # h2 = md["g"].var() / ((md["g"] + md["e"]).var())
 
-    return pop, params, seed, E_MEAN, E_SD # if you don't return pop you'll get an error in write_treefile: 'AttributeError: 'NoneType' object has no attribute 'dump_tables_to_tskit'
+    return (
+        pop,
+        params,
+        seed,
+        E_MEAN,
+        E_SD,
+    )  # if you don't return pop you'll get an error in write_treefile: 'AttributeError: 'NoneType' object has no attribute 'dump_tables_to_tskit'
 
 
-
-def write_treefile(*, pop: fwdpy11.DiploidPopulation, seed: int, params: fwdpy11.ModelParams, args: argparse.Namespace, E_MEAN: int, E_SD:int): #note that technically, in line 159 below, you don't need the star here to be able to use the args in any order IF you've named them. However, the converse isn't true- once you have the star here, you need to have non-positional arguments when the fuction is called. 
-    ts = pop.dump_tables_to_tskit(# The actual model params
-    model_params= params, #why is it not necessary to have params as an argument in write_treefile, like seed or args? from my understanding, we're defining it here, and model_params is of class ModelParams(so far as I can tell)
-
-    # Any dict you want.  Some of what I'm putting here is redundant...
-    # This dict will get written to the "provenance" table
-    parameters={"seed": seed, "simplification_interval": 100, "meanE": E_MEAN, "E_SD": E_SD}, 
-    wrapped=True,)
+def write_treefile(
+    *,
+    pop: fwdpy11.DiploidPopulation,
+    seed: int,
+    params: fwdpy11.ModelParams,
+    args: argparse.Namespace,
+    E_MEAN: int,
+    E_SD: int,
+):  # note that technically, in line 159 below, you don't need the star here to be able to use the args in any order IF you've named them. However, the converse isn't true- once you have the star here, you need to have non-positional arguments when the fuction is called.
+    ts = pop.dump_tables_to_tskit(  # The actual model params
+        model_params=params,  # why is it not necessary to have params as an argument in write_treefile, like seed or args? from my understanding, we're defining it here, and model_params is of class ModelParams(so far as I can tell)
+        # Any dict you want.  Some of what I'm putting here is redundant...
+        # This dict will get written to the "provenance" table
+        parameters={
+            "seed": seed,
+            "simplification_interval": 100,
+            "meanE": E_MEAN,
+            "E_SD": E_SD,
+        },
+        wrapped=True,
+    )
     # The ts is a fwdpy11.WrappedTreeSequence.
     # To dump it, access the underling tskit.TreeSequence
     ts.ts.dump(args.treefile)
-
-
 
     print(ts.model_params)
     print()
@@ -150,12 +171,15 @@ def main():
     validate_args(args)
 
     # evolve our population
-    pop,params,seed,E_MEAN,E_SD= run_sim(args) #if you keep as before, where pop = run_sim, AttributeError: 'function' object has no attribute 'params'
+    pop, params, seed, E_MEAN, E_SD = run_sim(
+        args
+    )  # if you keep as before, where pop = run_sim, AttributeError: 'function' object has no attribute 'params'
 
     # write the output to a tskit "trees" file
     print("params is", type(params))
-    write_treefile(pop=pop, params=params, seed=seed, args=args, E_MEAN=E_MEAN, E_SD=E_SD)
-
+    write_treefile(
+        pop=pop, params=params, seed=seed, args=args, E_MEAN=E_MEAN, E_SD=E_SD
+    )
 
 
 if __name__ == "__main__":
