@@ -11,7 +11,7 @@
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) # https://stackoverflow.com/questions/3452086/getting-path-of-an-r-script/35842176#35842176
 
 
-metadata <- read.table("harpak_przeworski.txt", header = TRUE, sep = "\t")
+metadata <- read.table("harpak_przeworski_case2.txt", header = TRUE, sep = "\t")
 # tried fill = TRUE here, and while it
 # does remove the scan error, it doesn't change that
 # metadata, when called, shows as 'not found'
@@ -48,3 +48,16 @@ ggplot(metadata, aes(x = (ind_genetic_value + ind_environmental_value), y = ind_
 
 ggplot(metadata, aes(x = ind_genetic_value, group = count, fill = count)) +
     geom_histogram(alpha = 0.7, binwidth = 0.06)
+
+
+
+
+# in order, what you want to see
+ggplot(metadata, aes(x = (ind_genetic_value + ind_environmental_value), y = ind_fitness, color = count)) +
+    geom_point()
+
+ggplot(metadata, aes(x = ind_environmental_value, group = count, color = count)) +
+    geom_density()
+
+ggplot(metadata, aes(x = ind_genetic_value, group = count, color = count)) +
+    geom_density()
