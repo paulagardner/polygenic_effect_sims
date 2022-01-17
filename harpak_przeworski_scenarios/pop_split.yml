@@ -1,0 +1,14 @@
+description: simple model w/o migration of a population split with even pop sizes
+time_units: generations
+defaults:
+  epoch: 
+    start_size: 100
+demes:
+  - name: ancestral
+    epochs:
+      - end_time: 1000
+  - name: A
+    ancestors: [ancestral]
+  - name: B
+    ancestors: [ancestral]
+    #if sizs not specified, it'll default to all descendant pops = ancestral pop sizes
