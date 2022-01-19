@@ -4,6 +4,7 @@ import sys
 import numpy as np
 import json
 import tskit
+import demes
 
 
 def make_parser() -> argparse.ArgumentParser:
@@ -22,8 +23,6 @@ def make_parser() -> argparse.ArgumentParser:
     )
 
     # parser.add_argument("--seed", "-s", type=int, default=0, help="Random number seed")
-
-    parser.add_argument("--N", type=int, help="Number of individuals")
 
     parser.add_argument("--MU", "--u", type=float, help="Mutation rate")
 
@@ -60,11 +59,6 @@ def validate_args(args: argparse.Namespace):
     if args.POPT is None:
         raise ValueError(f"Population optimum trait value cannot be None")
 
-    if args.N is None:
-        raise ValueError(
-            f"Number of individuals cannot be None"
-        )  # this was giving me trouble. Error was AttributeError: 'Namespace' object has no attribute 'N'
-
     if args.MU is None:
         raise ValueError(f"Mutation rate cannot be None")
 
@@ -83,7 +77,48 @@ def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
     VS = args.VS
     E_SD = args.E_SD
     E_MEAN = args.E_MEAN
-    N = args.N
+
+    def yaml_function():
+        yaml = """description:
+  simple model w/o migration of a population split with even pop sizes
+time_units: generations
+defaults:
+  epoch:
+    start_size: 100
+demes:
+  - name: ancestral
+    epochs:
+      - end_time: 1000
+  - name: A
+    ancestors: [ancestral]
+  - name: B
+    ancestors: [ancestral]
+    """  # dealing with the formatting here proved very annoying. either figure out how to
+        # just import the yaml or double check the formatting online or w/ the debugger
+        return demes.loads(yaml)
+
+    graph = yaml_function()
+
+    model = fwdpy11.discrete_demography.from_demes(
+        "pop_split.yml",
+        burnin=10,
+    )
+
+    initial_sizes = [
+        model.metadata["initial_sizes"][i]
+        for i in sorted(model.metadata["initial_sizes"].keys())
+    ]
+
+    total_length = model.metadata["total_simulation_length"]
+
+    pop = fwdpy11.DiploidPopulation(
+        initial_sizes, 1000.0
+    )  # second part is specifying genome size, if I read the documentation correctly
+    # so all this ends up using is initial_sizes instead of N.
+
+    # randint returns numpt.int64, which json doesn't
+    # know how to handle.  So, we turn it
+    # to a regular Python int to circumvent this problem.
 
     paramsdict = {
         "sregions": [fwdpy11.GaussianS(0, 1, 1, 0.25)],
@@ -94,14 +129,10 @@ def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
             2, fwdpy11.GSS(POPT, VS), fwdpy11.GaussianNoise(E_SD, E_MEAN)
         ),
         "prune_selected": False,
-        "simlen": 10 * N,
+        "simlen": total_length,
+        "demography": model,
     }
 
-    pop = fwdpy11.DiploidPopulation(N, 1.00)
-
-    # randint returns numpt.int64, which json doesn't
-    # know how to handle.  So, we turn it
-    # to a regular Python int to circumvent this problem.
     seed = int(np.random.randint(0, 100000, 1)[0])
 
     rng = fwdpy11.GSLrng(seed)
@@ -110,7 +141,13 @@ def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
         **paramsdict
     )  # as in example for dict, these can be the same variable. I keep them separate here for legibility
 
-    fwdpy11.evolvets(rng, pop, params, simplification_interval=100)
+    fwdpy11.evolvets(
+        rng,
+        pop,
+        params,
+        simplification_interval=100,
+        check_demographic_event_timings=True,
+    )
 
     # md = np.array(pop.diploid_metadata, copy=False)
 
@@ -118,6 +155,7 @@ def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
 
     return (
         pop,
+        graph,
         params,
         seed,
         E_MEAN,
@@ -128,16 +166,18 @@ def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
 def write_treefile(
     *,
     pop: fwdpy11.DiploidPopulation,
-    seed: int,
+    graph,
     params: fwdpy11.ModelParams,
+    seed: int,
     args: argparse.Namespace,
     E_MEAN: int,
     E_SD: int,
 ):  # note that technically, in line 159 below, you don't need the star here to be able to use the args in any order IF you've named them. However, the converse isn't true- once you have the star here, you need to have non-positional arguments when the fuction is called.
-    ts = pop.dump_tables_to_tskit(  # The actual model params
+    ts = pop.dump_tables_to_tskit(  # The actual model params ###NOTE that you can specify DEMES_GRAPH in this! and population_Metadata. look at fwdpy11 docs for this
         model_params=params,  # why is it not necessary to have params as an argument in write_treefile, like seed or args? from my understanding, we're defining it here, and model_params is of class ModelParams(so far as I can tell)
         # Any dict you want.  Some of what I'm putting here is redundant...
         # This dict will get written to the "provenance" table
+        demes_graph=graph,
         parameters={
             "seed": seed,
             "simplification_interval": 100,
@@ -154,9 +194,8 @@ def write_treefile(
     print()
     provenance = json.loads(ts.ts.provenance(0).record)
     print(provenance)
-    print()
-    print(ts.model_params.gvalue.gvalue_to_fitness.VS)
-    print(ts.model_params.gvalue.gvalue_to_fitness.optimum)
+    print("VS was:", ts.model_params.gvalue.gvalue_to_fitness.VS)
+    print("POPT was:", ts.model_params.gvalue.gvalue_to_fitness.optimum)
     print()
 
 
@@ -171,14 +210,20 @@ def main():
     validate_args(args)
 
     # evolve our population
-    pop, params, seed, E_MEAN, E_SD = run_sim(
+    pop, graph, params, seed, E_MEAN, E_SD = run_sim(
         args
     )  # if you keep as before, where pop = run_sim, AttributeError: 'function' object has no attribute 'params'
 
     # write the output to a tskit "trees" file
     print("params is", type(params))
     write_treefile(
-        pop=pop, params=params, seed=seed, args=args, E_MEAN=E_MEAN, E_SD=E_SD
+        pop=pop,
+        graph=graph,
+        params=params,
+        seed=seed,
+        args=args,
+        E_MEAN=E_MEAN,
+        E_SD=E_SD,
     )
 
 

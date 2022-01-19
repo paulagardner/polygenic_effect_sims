@@ -8,7 +8,7 @@
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) # https://stackoverflow.com/questions/3452086/getting-path-of-an-r-script/35842176#35842176
 
 
-metadata <- read.table("harpak_przeworski_case3.txt", header = TRUE, sep = "\t")
+metadata <- read.table("harpak_przeworski.txt", header = TRUE, sep = "\t")
 
 
 library("ggplot2")
