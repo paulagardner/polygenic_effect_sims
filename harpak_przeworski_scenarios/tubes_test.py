@@ -35,14 +35,63 @@ pop = fwdpy11.DiploidPopulation(
 )  # second part is specifying genome size, if I read the documentation correctly
 # print(pop.deme_sizes())
 print()
-print(pop.deme_sizes(as_dict=True))
+print(
+    pop.deme_sizes(as_dict=True)
+)  # just checking- this is from fwdpy11.DiploidPopulation.deme_sizes
 
 graph = demes.load("pop_split.yml")
 ax = demesdraw.tubes(graph)
 ax.figure.savefig("tubes_test.svg")
 
-demog = fwdpy11.discrete_demography.from_demes(
-    graph
-)  # so this contains all the information it seems your sim would need to run
+# demog = fwdpy11.discrete_demography.from_demes(
+#    graph
+# )
 # print(demog) #same as print(model)
 # print(model.metadata)
+
+
+def yaml_function():
+    import demes
+
+    yaml = """
+description:
+  simple model w/o migration of a population split with even pop sizes
+time_units: generations
+defaults:
+  epoch:
+    start_size: 100
+demes:
+  - name: ancestral
+    epochs:
+      - end_time: 1000
+  - name: A
+    ancestors: [ancestral]
+  - name: B
+    ancestors: [ancestral]
+"""
+    return demes.loads(yaml)
+
+
+graph = yaml_function()
+
+demography = fwdpy11.discrete_demography.from_demes(
+    graph,
+    burnin=10,
+)
+
+initial_sizes = [
+    demography.metadata["initial_sizes"][i]
+    for i in sorted(demography.metadata["initial_sizes"].keys())
+]
+
+total_length = demography.metadata["total_simulation_length"]
+
+pop = fwdpy11.DiploidPopulation(initial_sizes, 1000.0)
+
+print()
+
+print(demography)
+print()
+print(pop)
+print()
+print(graph.demes)
