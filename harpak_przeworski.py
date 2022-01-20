@@ -78,30 +78,11 @@ def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
     E_SD = args.E_SD
     E_MEAN = args.E_MEAN
 
-    def yaml_function():
-        yaml = """description:
-  simple model w/o migration of a population split with even pop sizes
-time_units: generations
-defaults:
-  epoch:
-    start_size: 100
-demes:
-  - name: ancestral
-    epochs:
-      - end_time: 1000
-  - name: A
-    ancestors: [ancestral]
-  - name: B
-    ancestors: [ancestral]
-    """  # dealing with the formatting here proved very annoying. either figure out how to
-        # just import the yaml or double check the formatting online or w/ the debugger
-        return demes.loads(yaml)
+    graph = demes.load("pop_split.yml")
+    # # dealing with the formatting here proved very annoying. either figure out how to
 
-    graph = yaml_function()
-
-    # graph = demes.load("pop_split.yml", format="yaml")
     model = fwdpy11.discrete_demography.from_demes(
-        "pop_split.yml",
+        graph,
         burnin=10,
     )
 
