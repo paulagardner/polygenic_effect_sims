@@ -99,6 +99,7 @@ demes:
 
     graph = yaml_function()
 
+    # graph = demes.load("pop_split.yml", format="yaml")
     model = fwdpy11.discrete_demography.from_demes(
         "pop_split.yml",
         burnin=10,
@@ -110,12 +111,15 @@ demes:
     ]
 
     total_length = model.metadata["total_simulation_length"]
+    # print(total_length)
 
     pop = fwdpy11.DiploidPopulation(
         initial_sizes, 1000.0
     )  # second part is specifying genome size, if I read the documentation correctly
     # so all this ends up using is initial_sizes instead of N.
 
+    dbg = fwdpy11.DemographyDebugger(initial_sizes, model.model)
+    print(dbg.report)
     # randint returns numpt.int64, which json doesn't
     # know how to handle.  So, we turn it
     # to a regular Python int to circumvent this problem.
@@ -141,12 +145,13 @@ demes:
         **paramsdict
     )  # as in example for dict, these can be the same variable. I keep them separate here for legibility
 
+    # print(paramsdict)
+
     fwdpy11.evolvets(
         rng,
         pop,
         params,
         simplification_interval=100,
-        check_demographic_event_timings=True,
     )
 
     # md = np.array(pop.diploid_metadata, copy=False)
@@ -166,14 +171,14 @@ demes:
 def write_treefile(
     *,
     pop: fwdpy11.DiploidPopulation,
-    graph,
+    graph: fwdpy11.discrete_demography,
     params: fwdpy11.ModelParams,
     seed: int,
     args: argparse.Namespace,
     E_MEAN: int,
     E_SD: int,
 ):  # note that technically, in line 159 below, you don't need the star here to be able to use the args in any order IF you've named them. However, the converse isn't true- once you have the star here, you need to have non-positional arguments when the fuction is called.
-    ts = pop.dump_tables_to_tskit(  # The actual model params ###NOTE that you can specify DEMES_GRAPH in this! and population_Metadata. look at fwdpy11 docs for this
+    ts = pop.dump_tables_to_tskit(  # The actual model params ###Note that you can specify DEMES_GRAPH in this! and population_Metadata. look at fwdpy11 docs for this
         model_params=params,  # why is it not necessary to have params as an argument in write_treefile, like seed or args? from my understanding, we're defining it here, and model_params is of class ModelParams(so far as I can tell)
         # Any dict you want.  Some of what I'm putting here is redundant...
         # This dict will get written to the "provenance" table
@@ -190,13 +195,15 @@ def write_treefile(
     # To dump it, access the underling tskit.TreeSequence
     ts.ts.dump(args.treefile)
 
-    print(ts.model_params)
-    print()
+    print(
+        ts.model_params
+    )  # this iteration is very unhappy with model_params, from what I can tell
+    # print()
     provenance = json.loads(ts.ts.provenance(0).record)
     print(provenance)
-    print("VS was:", ts.model_params.gvalue.gvalue_to_fitness.VS)
-    print("POPT was:", ts.model_params.gvalue.gvalue_to_fitness.optimum)
-    print()
+    # print("VS was:", ts.model_params.gvalue.gvalue_to_fitness.VS)
+    # print("POPT was:", ts.model_params.gvalue.gvalue_to_fitness.optimum)
+    # print()
 
 
 def main():
