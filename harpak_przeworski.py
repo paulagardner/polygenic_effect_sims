@@ -122,7 +122,7 @@ def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
         ),
         "prune_selected": False,
         "simlen": total_length,
-        # "demography": demography,
+        "demography": demography,
     }
 
     seed = int(np.random.randint(0, 100000, 1)[0])
@@ -170,6 +170,7 @@ def write_treefile(
         model_params=params,  # why is it not necessary to have params as an argument in write_treefile, like seed or args? from my understanding, we're defining it here, and model_params is of class ModelParams(so far as I can tell)
         # Any dict you want.  Some of what I'm putting here is redundant...
         # This dict will get written to the "provenance" table
+        demes_graph=graph,
         parameters={
             "seed": seed,
             "simplification_interval": 100,
@@ -182,7 +183,7 @@ def write_treefile(
     # g = demes.Graph.fromdict(ts.metadata["demes_graph"])
     # assert g == gutenkunst
 
-    # assert demes.Graph.fromdict(ts.ts.metadata["demes_graph"]) == graph
+    assert demes.Graph.fromdict(ts.ts.metadata["demes_graph"]) == graph
     print()
     print(graph)
 
