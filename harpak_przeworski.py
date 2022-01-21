@@ -1,5 +1,6 @@
 import argparse
 import fwdpy11
+import fwdpy11.discrete_demography
 import sys
 import numpy as np
 import json
@@ -79,27 +80,33 @@ def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
     E_MEAN = args.E_MEAN
 
     graph = demes.load("pop_split.yml")
-    # # dealing with the formatting here proved very annoying. either figure out how to
 
-    model = fwdpy11.discrete_demography.from_demes(
-        graph,
+    print("check", type(graph))
+    print()
+
+    demography = fwdpy11.discrete_demography.from_demes(
+        "pop_split.yml",
         burnin=10,
     )
 
     initial_sizes = [
-        model.metadata["initial_sizes"][i]
-        for i in sorted(model.metadata["initial_sizes"].keys())
+        demography.metadata["initial_sizes"][i]
+        for i in sorted(demography.metadata["initial_sizes"].keys())
     ]
 
-    total_length = model.metadata["total_simulation_length"]
+    total_length = demography.metadata["total_simulation_length"]
     # print(total_length)
 
+    # pop = fwdpy11.DiploidPopulation(
+    #    initial_sizes, 1000.0
+
     pop = fwdpy11.DiploidPopulation(
-        initial_sizes, 1000.0
-    )  # second part is specifying genome size, if I read the documentation correctly
+        [v for _, v in demography.metadata["initial_sizes"].items()], 1.0
+    )
+    # second part is specifying genome size, if I read the documentation correctly
     # so all this ends up using is initial_sizes instead of N.
 
-    dbg = fwdpy11.DemographyDebugger(initial_sizes, model.model)
+    dbg = fwdpy11.DemographyDebugger(initial_sizes, demography.model)
     print(dbg.report)
     # randint returns numpt.int64, which json doesn't
     # know how to handle.  So, we turn it
@@ -115,7 +122,7 @@ def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
         ),
         "prune_selected": False,
         "simlen": total_length,
-        "demography": model,
+        # "demography": demography,
     }
 
     seed = int(np.random.randint(0, 100000, 1)[0])
@@ -163,7 +170,6 @@ def write_treefile(
         model_params=params,  # why is it not necessary to have params as an argument in write_treefile, like seed or args? from my understanding, we're defining it here, and model_params is of class ModelParams(so far as I can tell)
         # Any dict you want.  Some of what I'm putting here is redundant...
         # This dict will get written to the "provenance" table
-        demes_graph=graph,
         parameters={
             "seed": seed,
             "simplification_interval": 100,
@@ -172,6 +178,14 @@ def write_treefile(
         },
         wrapped=True,
     )
+
+    # g = demes.Graph.fromdict(ts.metadata["demes_graph"])
+    # assert g == gutenkunst
+
+    # assert demes.Graph.fromdict(ts.ts.metadata["demes_graph"]) == graph
+    print()
+    print(graph)
+
     # The ts is a fwdpy11.WrappedTreeSequence.
     # To dump it, access the underling tskit.TreeSequence
     ts.ts.dump(args.treefile)
@@ -198,7 +212,7 @@ def main():
     validate_args(args)
 
     # evolve our population
-    pop, graph, params, seed, E_MEAN, E_SD = run_sim(
+    (pop, graph, params, seed, E_MEAN, E_SD,) = run_sim(
         args
     )  # if you keep as before, where pop = run_sim, AttributeError: 'function' object has no attribute 'params'
 
