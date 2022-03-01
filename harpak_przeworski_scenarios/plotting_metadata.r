@@ -13,7 +13,7 @@ metadata <- read.table("sim.txt", header = TRUE, sep = "\t")
 metadata
 
 library("ggplot2")
-ggplot(metadata, aes(x = (ind_genetic_value + ind_environmental_value), y = ind_fitness, color = deme)) +
+ggplot(metadata, aes(x = (ind_phenotype), y = ind_fitness, color = deme)) +
     geom_point()
 
 ggplot(metadata, aes(x = ind_environmental_value, group = deme, color = deme)) +
@@ -24,19 +24,19 @@ ggplot(metadata, aes(x = ind_genetic_value, group = deme, color = deme)) +
 
 
 ####### SUMMARY STATISTICS
-"""for (i in unique(metadata$deme)) {
-    print(sd(metadata$ind_genetic_value + metadata$ind_environmental_value))
-}"""
+# for (i in unique(metadata$deme)) {
+#    print(sd(metadata$ind_genetic_value + metadata$ind_environmental_value))
+# }
 
 
 library(dplyr)
 group <- group_by(metadata, deme)
 # print(group)
-summarise(group, mean = mean(ind_genetic_value + ind_environmental_value), sd = sd(ind_genetic_value + ind_environmental_value))
+summarise(group, mean = mean(ind_phenotype), sd = sd(ind_phenotype))
 
 summarise(group, mean = mean(ind_genetic_value), sd = sd(ind_genetic_value))
-summarise(group, mean = mean(ind_environmental_value), sd = sd(ind_environmental_value))
 
+summarise(group, mean = mean(ind_environmental_value), sd = sd(ind_environmental_value))
 ###### OVERALL
 phenotype <- metadata$ind_genetic_value + metadata$ind_environmental_value
 print(sd(phenotype))
