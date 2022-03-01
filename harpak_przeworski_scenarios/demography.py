@@ -8,192 +8,196 @@ import json
 import argparse
 
 
-# make an argument parser that can output help.
-ADHF = argparse.ArgumentDefaultsHelpFormatter
-parser = argparse.ArgumentParser(__file__, formatter_class=ADHF)
-# __file__ specifies the full path to this file
+def make_parser() -> argparse.ArgumentParser:
+    # make an argument parser that can output help.
+    ADHF = argparse.ArgumentDefaultsHelpFormatter
+    parser = argparse.ArgumentParser(__file__, formatter_class=ADHF)
+    # __file__ specifies the full path to this file
 
-parser.add_argument(
-    "--yaml",
-    "-y",
-    type=str,
-    default=None,
-    help="yaml file input name (demes specification)",
-)
+    parser.add_argument(
+        "--yaml",
+        "-y",
+        type=str,
+        default=None,
+        help="yaml file input name (demes specification)",
+    )
+    return parser
 
 
 # will need to add the above back in when I split things up into functions
 
 
-args = parser.parse_args()
-
-"""
 def validate_args(args: argparse.Namespace):
     if args.yaml is None:
-        raise ValueError(f"must specify a demes yaml model for the simulation")"""
+        raise ValueError(f"must specify a demes yaml model for the simulation")
 
 
-# MU = args.MU
-# POPT = args.POPT
-# VS = args.VS
-# E_SD = args.E_SD
-# E_MEAN = args.E_MEAN
-# POPT = 0.0  # maybe if you do this as a list, then you can specify different slices for fwdpy11.Additive Popt
-# and then iterate over the individuals when you write to the text file
+def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
+    # MU = args.MU
+    # POPT = args.POPT
+    # VS = args.VS
+    # E_SD = args.E_SD
+    # E_MEAN = args.E_MEAN
+    # POPT = 0.0  # maybe if you do this as a list, then you can specify different slices for fwdpy11.Additive Popt
+    # and then iterate over the individuals when you write to the text file
 
-POPT = 1.0
-# optima_list = [0.0, 0.1, -0.1]
-optima_list = [0.1, -0.1]
+    POPT = 1.0
+    # optima_list = [0.0, 0.1, -0.1]
+    optima_list = [0.1, -0.1]
 
-VS = 1.0
+    VS = 1.0
 
-E_SD = 1.0
-# env_sd_list = [1.0, 1.3, 0.7]
-env_sd_list = [1.3, 0.7]
+    E_SD = 1.0
+    # env_sd_list = [1.0, 1.3, 0.7]
+    env_sd_list = [1.3, 0.7]
 
-E_MEAN = 1.0
-# env_mean_list = [1.0, 1.1, 0.9]
-env_mean_list = [1.1, 0.9]
+    E_MEAN = 1.0
+    # env_mean_list = [1.0, 1.1, 0.9]
+    env_mean_list = [1.1, 0.9]
 
-MU = 1e-3
+    MU = 1e-3
 
-burnin = 10
+    burnin = 10
 
-additive_objects = []
-for i in optima_list:
-    additive_objects.append(
-        fwdpy11.Additive(2.0, fwdpy11.GSS(i, VS), fwdpy11.GaussianNoise(E_SD, E_MEAN))
+    additive_objects = []
+    for i in optima_list:
+        additive_objects.append(
+            fwdpy11.Additive(
+                2.0, fwdpy11.GSS(i, VS), fwdpy11.GaussianNoise(E_SD, E_MEAN)
+            )
+        )
+    print(additive_objects)
+    # make fwdpy11.Additive objects from the POPT specified using list comprehension
+
+    env_sd_objects = []
+    for i in env_sd_list:
+        env_sd_objects.append(
+            fwdpy11.Additive(
+                2.0, fwdpy11.GSS(POPT, VS), fwdpy11.GaussianNoise(i, E_MEAN)
+            )
+        )
+
+    env_mean_objects = []
+    for i in env_mean_list:
+        env_mean_objects.append(
+            fwdpy11.Additive(2.0, fwdpy11.GSS(POPT, VS), fwdpy11.GaussianNoise(E_SD, i))
+        )
+
+    input_file = args.yaml
+
+    demog = fwdpy11.discrete_demography.from_demes(input_file, burnin)
+    # demog = fwdpy11.discrete_demography.from_demes("no_ancestry.yaml", burnin)
+    pop = fwdpy11.DiploidPopulation(
+        [v for _, v in demog.metadata["initial_sizes"].items()], 1.0
     )
-print(additive_objects)
-# make fwdpy11.Additive objects from the POPT specified using list comprehension
+    # print(pop.N)
+    print()
+    print()
 
-env_sd_objects = []
-for i in env_sd_list:
-    env_sd_objects.append(
-        fwdpy11.Additive(2.0, fwdpy11.GSS(POPT, VS), fwdpy11.GaussianNoise(i, E_MEAN))
-    )
+    initial_sizes = [
+        demog.metadata["initial_sizes"][i]
+        for i in sorted(demog.metadata["initial_sizes"].keys())
+    ]
 
-env_mean_objects = []
-for i in env_mean_list:
-    env_mean_objects.append(
-        fwdpy11.Additive(2.0, fwdpy11.GSS(POPT, VS), fwdpy11.GaussianNoise(E_SD, i))
-    )
+    dbg = fwdpy11.DemographyDebugger(initial_sizes, demog.model)
+    print(dbg.report)
 
-input_file = args.yaml
+    pdict = {
+        "sregions": [fwdpy11.GaussianS(0, 1, 1, 0.25)],
+        "nregions": [],
+        "recregions": [fwdpy11.PoissonInterval(0, 1.00, 1e-3)],
+        "rates": (0, MU, None),
+        "gvalue": env_sd_objects,
+        # fwdpy11.Additive(gvalue_to_fitness= fwdpy11.GSS(optimum = moving_optimum_deme_2, VS), fwdpy11.GaussianNoise(E_SD, E_MEAN), ndemes = 3, scaling= 2)],
+        "prune_selected": False,
+        "simlen": demog.metadata["total_simulation_length"],
+        "demography": demog,
+    }
 
-demog = fwdpy11.discrete_demography.from_demes(input_file, burnin)
-# demog = fwdpy11.discrete_demography.from_demes("no_ancestry.yaml", burnin)
-pop = fwdpy11.DiploidPopulation(
-    [v for _, v in demog.metadata["initial_sizes"].items()], 1.0
-)
-# print(pop.N)
-print()
-print()
+    mparams = fwdpy11.ModelParams(**pdict)
 
-initial_sizes = [
-    demog.metadata["initial_sizes"][i]
-    for i in sorted(demog.metadata["initial_sizes"].keys())
-]
+    # print(mparams.asblack)
+    # print(mparams)
+    print(mparams.gvalue)
+    # for fwdpy11.Additive in mparams.gvalue:
+    get_gvalue_to_fitness = np.array([md.gvalue_to_fitness for md in mparams.gvalue])
+    print(get_gvalue_to_fitness)
 
-dbg = fwdpy11.DemographyDebugger(initial_sizes, demog.model)
-print(dbg.report)
+    popt = np.array([md.optimum for md in get_gvalue_to_fitness])
+    print(popt)
 
-pdict = {
-    "sregions": [fwdpy11.GaussianS(0, 1, 1, 0.25)],
-    "nregions": [],
-    "recregions": [fwdpy11.PoissonInterval(0, 1.00, 1e-3)],
-    "rates": (0, MU, None),
-    "gvalue": env_sd_objects,
-    # fwdpy11.Additive(gvalue_to_fitness= fwdpy11.GSS(optimum = moving_optimum_deme_2, VS), fwdpy11.GaussianNoise(E_SD, E_MEAN), ndemes = 3, scaling= 2)],
-    "prune_selected": False,
-    "simlen": demog.metadata["total_simulation_length"],
-    "demography": demog,
-}
+    # popt2 = np.array([md.optimum for md in mparams.gvalue.gvalue_to_fitness])
+    # print(popt2)
+    # Not sure why the above doesn't work!
 
-mparams = fwdpy11.ModelParams(**pdict)
+    get_gaussian_noise = np.array([md.noise for md in mparams.gvalue])
+    print(get_gaussian_noise)
 
-# print(mparams.asblack)
-# print(mparams)
-print(mparams.gvalue)
-# for fwdpy11.Additive in mparams.gvalue:
-get_gvalue_to_fitness = np.array([md.gvalue_to_fitness for md in mparams.gvalue])
-print(get_gvalue_to_fitness)
+    e_sd = np.array([md.sd for md in get_gaussian_noise])
+    print(e_sd)
 
-popt = np.array([md.optimum for md in get_gvalue_to_fitness])
-print(popt)
+    e_mean = np.array([md.mean for md in get_gaussian_noise])
 
-# popt2 = np.array([md.optimum for md in mparams.gvalue.gvalue_to_fitness])
-# print(popt2)
-# Not sure why the above doesn't work!
+    print()
+    print()
 
-get_gaussian_noise = np.array([md.noise for md in mparams.gvalue])
-print(get_gaussian_noise)
+    seed = int(np.random.randint(0, 100000, 1)[0])
+    # randint returns numpt.int64, which json doesn't
+    # know how to handle.  So, we turn it
+    # to a regular Python int to circumvent this problem.
+    rng = fwdpy11.GSLrng(seed)
 
-e_sd = np.array([md.sd for md in get_gaussian_noise])
-print(e_sd)
+    fwdpy11.evolvets(rng, pop, mparams, simplification_interval=100)
+    # print(pop.N, pop.deme_sizes())  # it's at this point that pop actually has the multiple demes.
 
-e_mean = np.array([md.mean for md in get_gaussian_noise])
+    g = demes.load(input_file)
+    # g = demes.load("no_ancestry.yaml")
+    ts = pop.dump_tables_to_tskit(demes_graph=g)
+    ts.dump("sim.trees")
 
-print()
-print()
+    tsl = tskit.load("sim.trees")
+    graph_dict = tsl.metadata["demes_graph"]
+    rebuilt_graph = demes.Graph.fromdict(graph_dict)
+    assert g == rebuilt_graph
 
-seed = int(np.random.randint(0, 100000, 1)[0])
-# randint returns numpt.int64, which json doesn't
-# know how to handle.  So, we turn it
-# to a regular Python int to circumvent this problem.
-rng = fwdpy11.GSLrng(seed)
+    print()
+    # print(tsl.metadata)
+    print()
+    # popt = tsl.model_params.gvalue.gvalue_to_fitness.optimum
+    #
+    # print(popt)
+    # popt = tsl.metadata["model_params"]  # trying to be able to write popt to txt file
+    # print(popt)
 
-fwdpy11.evolvets(rng, pop, mparams, simplification_interval=100)
-# print(pop.N, pop.deme_sizes())  # it's at this point that pop actually has the multiple demes.
+    # vs = tsl.model_params.gvalue.gvalue_to_fitness.VS
+    ind_md = fwdpy11.tskit_tools.decode_individual_metadata(tsl)
+    print(ind_md)
 
-g = demes.load(input_file)
-# g = demes.load("no_ancestry.yaml")
-ts = pop.dump_tables_to_tskit(demes_graph=g)
-ts.dump("sim.trees")
+    print()
 
-tsl = tskit.load("sim.trees")
-graph_dict = tsl.metadata["demes_graph"]
-rebuilt_graph = demes.Graph.fromdict(graph_dict)
-assert g == rebuilt_graph
+    provenance = json.loads(ts.provenance(0).record)
+    fitness = np.array([md.w for md in ind_md])
 
-print()
-# print(tsl.metadata)
-print()
-# popt = tsl.model_params.gvalue.gvalue_to_fitness.optimum
-#
-# print(popt)
-# popt = tsl.metadata["model_params"]  # trying to be able to write popt to txt file
-# print(popt)
+    genetic_value = np.array([md.g for md in ind_md])
+    environmental_value = np.array([md.e for md in ind_md])
+    phenotype = np.array([md.g + md.e for md in ind_md])
+    deme = np.array([md.deme for md in ind_md])
+    """return (
+        # pop,
+        # params,
+        # seed,
+        # E_MEAN,
+        # E_SD,
+        yaml
+    )"""  # this is from my other script, where I'd pass these to write_treefile
+    H2_list = []
+    for i in env_sd_list:
+        H2_list.append(
+            4 * MU * VS / ((4 * MU * VS) + (i ** 2))
+        )  # square env_sd bc sd is sqrt(variance)
 
-# vs = tsl.model_params.gvalue.gvalue_to_fitness.VS
-
-ind_md = fwdpy11.tskit_tools.decode_individual_metadata(tsl)
-print(ind_md)
-
-print()
-H2_list = []
-for i in env_sd_list:
-    H2_list.append(
-        4 * MU * VS / ((4 * MU * VS) + (i ** 2))
-    )  # square env_sd bc sd is sqrt(variance)
-
-print(H2_list)
-
-provenance = json.loads(ts.provenance(0).record)
-fitness = np.array([md.w for md in ind_md])
-
-genetic_value = np.array([md.g for md in ind_md])
-environmental_value = np.array([md.e for md in ind_md])
-phenotype = np.array([md.g + md.e for md in ind_md])
-deme = np.array([md.deme for md in ind_md])
-"""return (
-    # pop,
-    # params,
-    # seed,
-    # E_MEAN,
-    # E_SD,
-    yaml
-)"""  # this is from my other script, where I'd pass these to write_treefile
+    print(H2_list)
+    return ind_md
 
 
 # print(fwdpy11.ModelParams)
@@ -212,15 +216,17 @@ def fitness_phenotype_summary(ind_md):
 
 def main():
     # build our parser
-    #parser = make_parser()
+    parser = make_parser()
 
     # process sys.argv
-    #args = parser.parse_args(sys.argv[1:])
+    args = parser.parse_args(sys.argv[1:])
 
     # check input
-    #validate_args(args)
+    validate_args(args)
 
-    fitness_phenotype_summary(ind_md)
+    run_sim(args)
+
+    fitness_phenotype_summary(ind_md=ind_md)
 
 
 if __name__ == "__main__":
