@@ -33,6 +33,7 @@ def validate_args(args: argparse.Namespace):
 
 
 def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
+    input_file = args.yaml
     # MU = args.MU
     # POPT = args.POPT
     # VS = args.VS
@@ -82,8 +83,6 @@ def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
         env_mean_objects.append(
             fwdpy11.Additive(2.0, fwdpy11.GSS(POPT, VS), fwdpy11.GaussianNoise(E_SD, i))
         )
-
-    input_file = args.yaml
 
     demog = fwdpy11.discrete_demography.from_demes(input_file, burnin)
     # demog = fwdpy11.discrete_demography.from_demes("no_ancestry.yaml", burnin)
@@ -149,7 +148,13 @@ def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
 
     fwdpy11.evolvets(rng, pop, mparams, simplification_interval=100)
     # print(pop.N, pop.deme_sizes())  # it's at this point that pop actually has the multiple demes.
+    return (pop, input_file)
 
+
+# print(fwdpy11.ModelParams)
+
+
+def fitness_phenotype_summary(pop, input_file):
     g = demes.load(input_file)
     # g = demes.load("no_ancestry.yaml")
     ts = pop.dump_tables_to_tskit(demes_graph=g)
@@ -159,7 +164,6 @@ def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
     graph_dict = tsl.metadata["demes_graph"]
     rebuilt_graph = demes.Graph.fromdict(graph_dict)
     assert g == rebuilt_graph
-
     print()
     # print(tsl.metadata)
     print()
@@ -197,13 +201,7 @@ def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
         )  # square env_sd bc sd is sqrt(variance)
 
     print(H2_list)
-    return ind_md
 
-
-# print(fwdpy11.ModelParams)
-
-
-def fitness_phenotype_summary(ind_md):
     with open("sim.txt", "w") as output_file:
         output_file.write(
             f"{'individual'}\t{'deme'}\t{'Population_optimum'}\t{'strength_stabilizing_selection'}\t{'mutation_rate'}\t{'e_mean'}\t{'e_SD'}\t{'ind_fitness'}\t{'ind_genetic_value'}\t{'ind_environmental_value'}\t{'ind_phenotype'}"
@@ -224,9 +222,15 @@ def main():
     # check input
     validate_args(args)
 
-    run_sim(args)
+    (pop, input_file) = run_sim(args)
 
-    fitness_phenotype_summary(ind_md=ind_md)
+    print("did it work???????????")
+    print(pop)
+    print(input_file)
+
+    fitness_phenotype_summary(
+        pop=pop, input_file=input_file
+    )  # make sure these and the above are in the same order
 
 
 if __name__ == "__main__":
