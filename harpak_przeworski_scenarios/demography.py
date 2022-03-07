@@ -8,6 +8,9 @@ import json
 import argparse
 
 
+# example to run: python demography.py -y no_ancestry.yaml --MU 1e-3 --VS 1.0 --output_fie "sim.txt"
+
+
 def make_parser() -> argparse.ArgumentParser:
     # make an argument parser that can output help.
     ADHF = argparse.ArgumentDefaultsHelpFormatter
@@ -21,6 +24,29 @@ def make_parser() -> argparse.ArgumentParser:
         default=None,
         help="yaml file input name (demes specification)",
     )
+
+    parser.add_argument("--MU", "--u", type=float, help="Mutation rate")
+
+    parser.add_argument(
+        "--VS",
+        type=float,
+        help="Variance of S, the inverse strength of stabilizing selection",
+    )
+
+    """
+    parser.add_argument(
+        "--POPT",
+        type=float,
+        nargs="+",
+        default=0,
+        help="Population optimum trait value",
+    )
+    """
+
+    parser.add_argument(
+        "--output_file", "-o", type=str, default=None, help="Output file name"
+    )
+
     return parser
 
 
@@ -31,12 +57,20 @@ def validate_args(args: argparse.Namespace):
     if args.yaml is None:
         raise ValueError(f"must specify a demes yaml model for the simulation")
 
+    if args.MU is None:
+        raise ValueError(f"Mutation rate cannot be None")
+
+    if args.VS is None:
+        raise ValueError(
+            f"In this simulation using stabilizing selection, VS cannot be None"
+        )
+
 
 def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
     input_file = args.yaml
     # MU = args.MU
     # POPT = args.POPT
-    # VS = args.VS
+
     # E_SD = args.E_SD
     # E_MEAN = args.E_MEAN
     # POPT = 0.0  # maybe if you do this as a list, then you can specify different slices for fwdpy11.Additive Popt
@@ -45,8 +79,9 @@ def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
     POPT = 1.0
     # optima_list = [0.0, 0.1, -0.1]
     optima_list = [0.1, -0.1]
+    # optima_list = [args.POPT] #this actually works to make a list just like the above, but passing it is a different issue
 
-    VS = 1.0
+    VS = args.VS
 
     E_SD = 1.0
     # env_sd_list = [1.0, 1.3, 0.7]
@@ -56,7 +91,7 @@ def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
     # env_mean_list = [1.0, 1.1, 0.9]
     env_mean_list = [1.1, 0.9]
 
-    MU = 1e-3
+    MU = args.MU
 
     burnin = 10
 
@@ -93,6 +128,7 @@ def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
     print()
     print()
 
+    fwdpy11.ConstantS
     initial_sizes = [
         demog.metadata["initial_sizes"][i]
         for i in sorted(demog.metadata["initial_sizes"].keys())
@@ -106,7 +142,7 @@ def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
         "nregions": [],
         "recregions": [fwdpy11.PoissonInterval(0, 1.00, 1e-3)],
         "rates": (0, MU, None),
-        "gvalue": env_sd_objects,
+        "gvalue": env_sd_objects,  #what I'm hardcoding in. Maybe I can make this an arg in the argparser so that I'm changing what I'm varying?
         # fwdpy11.Additive(gvalue_to_fitness= fwdpy11.GSS(optimum = moving_optimum_deme_2, VS), fwdpy11.GaussianNoise(E_SD, E_MEAN), ndemes = 3, scaling= 2)],
         "prune_selected": False,
         "simlen": demog.metadata["total_simulation_length"],
@@ -115,6 +151,48 @@ def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
 
     mparams = fwdpy11.ModelParams(**pdict)
 
+    print()
+
+    seed = int(np.random.randint(0, 100000, 1)[0])
+    # randint returns numpt.int64, which json doesn't
+    # know how to handle.  So, we turn it
+    # to a regular Python int to circumvent this problem.
+    rng = fwdpy11.GSLrng(seed)
+
+    fwdpy11.evolvets(rng, pop, mparams, simplification_interval=100)
+    # print(pop.N, pop.deme_sizes())  # it's at this point that pop actually has the multiple demes.
+    return (pop, mparams, input_file)
+
+
+def write_treefile(pop, input_file):
+    g = demes.load(input_file)
+    # g = demes.load("no_ancestry.yaml")
+    ts = pop.dump_tables_to_tskit(demes_graph=g)
+    ts.dump("sim.trees")
+
+    tsl = tskit.load("sim.trees")
+    graph_dict = tsl.metadata["demes_graph"]
+    rebuilt_graph = demes.Graph.fromdict(graph_dict)
+    ind_md = fwdpy11.tskit_tools.decode_individual_metadata(tsl)
+    assert g == rebuilt_graph
+    print()
+    # print(tsl.metadata)
+    print()
+    print()
+
+    provenance = json.loads(ts.provenance(0).record)
+    print("PROVENANCE IS")
+    print(provenance)
+    return ind_md
+
+
+# print(fwdpy11.ModelParams)
+
+
+def fitness_phenotype_summary(args, mparams, ind_md):
+    VS = args.VS
+    MU = args.MU
+    # print(tsl.metadata)
     # print(mparams.asblack)
     # print(mparams)
     print(mparams.gvalue)
@@ -138,35 +216,6 @@ def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
     e_mean = np.array([md.mean for md in get_gaussian_noise])
 
     print()
-    print()
-
-    seed = int(np.random.randint(0, 100000, 1)[0])
-    # randint returns numpt.int64, which json doesn't
-    # know how to handle.  So, we turn it
-    # to a regular Python int to circumvent this problem.
-    rng = fwdpy11.GSLrng(seed)
-
-    fwdpy11.evolvets(rng, pop, mparams, simplification_interval=100)
-    # print(pop.N, pop.deme_sizes())  # it's at this point that pop actually has the multiple demes.
-    return (pop, input_file)
-
-
-# print(fwdpy11.ModelParams)
-
-
-def fitness_phenotype_summary(pop, input_file):
-    g = demes.load(input_file)
-    # g = demes.load("no_ancestry.yaml")
-    ts = pop.dump_tables_to_tskit(demes_graph=g)
-    ts.dump("sim.trees")
-
-    tsl = tskit.load("sim.trees")
-    graph_dict = tsl.metadata["demes_graph"]
-    rebuilt_graph = demes.Graph.fromdict(graph_dict)
-    assert g == rebuilt_graph
-    print()
-    # print(tsl.metadata)
-    print()
     # popt = tsl.model_params.gvalue.gvalue_to_fitness.optimum
     #
     # print(popt)
@@ -174,12 +223,8 @@ def fitness_phenotype_summary(pop, input_file):
     # print(popt)
 
     # vs = tsl.model_params.gvalue.gvalue_to_fitness.VS
-    ind_md = fwdpy11.tskit_tools.decode_individual_metadata(tsl)
-    print(ind_md)
+    # print(ind_md)
 
-    print()
-
-    provenance = json.loads(ts.provenance(0).record)
     fitness = np.array([md.w for md in ind_md])
 
     genetic_value = np.array([md.g for md in ind_md])
@@ -195,20 +240,21 @@ def fitness_phenotype_summary(pop, input_file):
         yaml
     )"""  # this is from my other script, where I'd pass these to write_treefile
     H2_list = []
+    """
     for i in env_sd_list:
         H2_list.append(
             4 * MU * VS / ((4 * MU * VS) + (i ** 2))
         )  # square env_sd bc sd is sqrt(variance)
-
+    """
     print(H2_list)
 
-    with open("sim.txt", "w") as output_file:
+    with open(args.output_file, "w") as output_file:
         output_file.write(
-            f"{'individual'}\t{'deme'}\t{'Population_optimum'}\t{'strength_stabilizing_selection'}\t{'mutation_rate'}\t{'e_mean'}\t{'e_SD'}\t{'ind_fitness'}\t{'ind_genetic_value'}\t{'ind_environmental_value'}\t{'ind_phenotype'}"
+            f"{'individual'}\t{'deme'}\t{'strength_stabilizing_selection'}\t{'mutation_rate'}\t{'Population_optimum'}\t{'e_mean'}\t{'e_SD'}\t{'ind_fitness'}\t{'ind_genetic_value'}\t{'ind_environmental_value'}\t{'ind_phenotype'}"
         )
         for ind, ind_md in enumerate(ind_md):
             output_file.write(
-                f"\n{ind}\t{deme[ind]}\t{popt}\t{VS}\t{MU}\t{e_mean}\t{e_sd}\t{fitness[ind]}\t{genetic_value[ind]}\t{environmental_value[ind]}\t{phenotype[ind]}"
+                f"\n{ind}\t{deme[ind]}\t{VS}\t{MU}\t{popt}\t{e_mean}\t{e_sd}\t{fitness[ind]}\t{genetic_value[ind]}\t{environmental_value[ind]}\t{phenotype[ind]}"
             )  # I want to have POPT and others be writing the results of the list, but not sure how to do that without the ts_metadata function
 
 
@@ -222,15 +268,19 @@ def main():
     # check input
     validate_args(args)
 
-    (pop, input_file) = run_sim(args)
+    # (pop, input_file) = run_sim(args)
 
-    print("did it work???????????")
-    print(pop)
-    print(input_file)
+    # fitness_phenotype_summary(
+    #    pop=pop, input_file=input_file
+    # )  # make sure these and the above are in the same order
 
-    fitness_phenotype_summary(
+    (pop, mparams, input_file) = run_sim(args)
+
+    ind_md = write_treefile(
         pop=pop, input_file=input_file
-    )  # make sure these and the above are in the same order
+    )  # defining ind_md is necessary (ask skylar for help explaining to yourself why), but if you don't specify variables for objects in the tuple that run_sim outputs,
+
+    fitness_phenotype_summary(args=args, mparams=mparams, ind_md=ind_md)
 
 
 if __name__ == "__main__":
