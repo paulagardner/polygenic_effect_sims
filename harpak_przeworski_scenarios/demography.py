@@ -8,9 +8,8 @@ import json
 import argparse
 
 
-# example to run: python demography.py -y no_ancestry.yaml --MU 1e-3 --VS 1.0 --POPT 1.0 -1.0 --E_SD 1 --E_MEAN 0 --output_file case_1_no_ancestry_rep1.txt
-# probably better to run this until I get E_SD, E_MEAN etc working properly, so as not to fool myself into thinking the input is specifying anything:
-# python demography.py -y no_ancestry.yaml --MU 1e-3 --VS 1.0 --POPT 1.0 -1.0 --output_file case_1_no_ancestry_rep1.txt
+# example to run: python demography.py -y no_ancestry.yaml --MU 1e-3 --VS 1.0 --POPT 0.0 0.0 --E_SD 1.5 0.5 --E_MEAN 0.0 0.0 --output_file test_case.txt
+# #must specify 2, 3, etc sets of values for however many demes I'm doing, due to collapsing everything down to one iterator
 
 
 def make_parser() -> argparse.ArgumentParser:
@@ -70,9 +69,6 @@ def make_parser() -> argparse.ArgumentParser:
     return parser
 
 
-# will need to add the above back in when I split things up into functions
-
-
 def validate_args(args: argparse.Namespace):
     if args.yaml is None:
         raise ValueError(f"must specify a demes yaml model for the simulation")
@@ -90,43 +86,18 @@ def validate_args(args: argparse.Namespace):
 
 def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
     input_file = args.yaml
-    # MU = args.MU
-    # POPT = args.POPT
-
-    # E_SD = args.E_SD
-    # E_MEAN = args.E_MEAN
-    # and then iterate over the individuals when you write to the text file
-
-    # optima_list = [0.0, 0.1, -0.1]
-    # optima_list = [0.1, -0.1]
-    # this actually works to make a list just like the above, but passing it is a different issue
 
     VS = args.VS
     MU = args.MU
 
-    # E_SD = 1.0
-    # env_sd_list = [1.0, 1.3, 0.7]
-    # env_sd_list = [1.3, 0.7]
-
-    optima_list = args.POPT
-    env_sd_list = args.E_SD
-    env_mean_list = args.E_MEAN
-
-    ##E_MEAN = 1.0
-    # env_mean_list = [1.0, 1.1, 0.9]
-    # env_mean_list = [1.1, 0.9]
-
     burnin = 10
 
-    """
     POPT = args.POPT
     E_SD = args.E_SD
     E_MEAN = args.E_MEAN
-    """  # I would like this, and the loops below, to be for i in POPT, E_SD, etc. if that's the case, hopefully it's because we can just be doing the above... and get rid of these defaults:
-    POPT_default = 0.0
-    E_SD_default = 1.0
-    E_MEAN_default = 0.0
-    #######HARDCODED IN!!! FIX!
+
+    print(POPT)
+    print(env_sd_list)
 
     additive_objects = []
     for i in optima_list:
@@ -138,25 +109,22 @@ def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
             )
         )
     print(additive_objects)
-    # make fwdpy11.Additive objects from the POPT specified using list comprehension
 
-    env_sd_objects = []
-    for i in env_sd_list:
-        env_sd_objects.append(
+    gvalue_objects = []
+    for i, y, z in zip(
+        range(len(E_SD)), range(len(POPT)), range(len(E_MEAN))
+    ):  # length of a variable gives you an integer of how long that list is, and range gives you a list of values from 0 to length (so if len = 2, range = [0, 1,])
+        gvalue_objects.append(
             fwdpy11.Additive(
                 2.0,
-                fwdpy11.GSS(POPT_default, VS),
-                fwdpy11.GaussianNoise(i, E_MEAN_default),
-            )
-        )
-
-    env_mean_objects = []
-    for i in env_mean_list:
-        env_mean_objects.append(
-            fwdpy11.Additive(
-                2.0,
-                fwdpy11.GSS(POPT_default, VS),
-                fwdpy11.GaussianNoise(E_SD_default, i),
+                fwdpy11.GSS(
+                    POPT[y], VS
+                ),  # so why range(len(POPT)) here? It's letting us have an index,
+                # so i'm saying when iterating over the y values of POPT, give me the yth value of that list, which depends on the loop
+                fwdpy11.GaussianNoise(
+                    E_SD[i], E_MEAN[z]
+                ),  # if using this syntax, you'll have to specify all values for the three variables in the command line,
+                # because zip will just not fully iterate over the longest list if lists are of unequal size
             )
         )
 
@@ -164,10 +132,9 @@ def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
     # demog = fwdpy11.discrete_demography.from_demes("no_ancestry.yaml", burnin)
     pop = fwdpy11.DiploidPopulation(
         [v for _, v in demog.metadata["initial_sizes"].items()], 1.0
-    )
+    )  # second parameter is genome length! Skylar was running into issues w/ sregions and recregions where she was specifying regions longer than her genome length
+
     # print(pop.N)
-    print()
-    print()
 
     fwdpy11.ConstantS
     initial_sizes = [
@@ -178,21 +145,14 @@ def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
     dbg = fwdpy11.DemographyDebugger(initial_sizes, demog.model)
     print(dbg.report)
 
-    """
-    if args.sim_type == popt_differs:
-        gvalue_objects = additive_objects
-    if args.sim_type == env_mean_differs:
-        gvalue_objects = env_mean_objects
-    if args.sim_type == env_sd_differs:
-        gvalue_objeccts = env_sd_objects
-    """  ###########ASK SKYLAR ABOUT THIS. IF THIS IS THE WAY TO DO IT THEN gvalue_objects IS WHAT I WAS PUTTING INTO gvalue
-
     pdict = {
-        "sregions": [fwdpy11.GaussianS(0, 1, 1, 0.25)],
+        "sregions": [
+            fwdpy11.GaussianS(0, 1, 1, 0.25)
+        ],  # you can run into trouble w/ using ints vs. floats here
         "nregions": [],
         "recregions": [fwdpy11.PoissonInterval(0, 1.00, 1e-3)],
         "rates": (0, MU, None),
-        "gvalue": env_sd_objects,  # ************************************************ what I'm hardcoding in. Maybe I can make this an arg in the argparser so that I'm changing what I'm varying?
+        "gvalue": gvalue_objects,  # ************************************************ what I'm hardcoding in. Maybe I can make this an arg in the argparser so that I'm changing what I'm varying?
         # (additive_objects if args.sim_type == popt_differs, env_sd_objects if args.sim_type == env_sd_differs, env_mean_objects if args.sim_type == env_mean_differs) #trying to specify argparser idea above
         "prune_selected": False,
         "simlen": demog.metadata["total_simulation_length"],
@@ -298,6 +258,8 @@ def fitness_phenotype_summary(args, mparams, ind_md):
     """
     print(H2_list)
 
+    print(ind_md)
+
     with open(args.output_file, "w") as output_file:
         output_file.write(
             f"{'individual'}\t{'deme'}\t{'strength_stabilizing_selection'}\t{'mutation_rate'}\t{'Population_optimum'}\t{'e_mean'}\t{'e_SD'}\t{'ind_fitness'}\t{'ind_genetic_value'}\t{'ind_environmental_value'}\t{'ind_phenotype'}"
@@ -328,7 +290,8 @@ def main():
 
     ind_md = write_treefile(
         pop=pop, input_file=input_file
-    )  # defining ind_md is necessary (ask skylar for help explaining to yourself why), but if you don't specify variables for objects in the tuple that run_sim outputs,
+    )  # defining ind_md is necessary (ask skylar for help explaining to yourself why), but if you don't specify variables for objects in the tuple
+    # that run_sim outputs,it doesn't know which one to assign to which/which one to access
 
     fitness_phenotype_summary(args=args, mparams=mparams, ind_md=ind_md)
 
