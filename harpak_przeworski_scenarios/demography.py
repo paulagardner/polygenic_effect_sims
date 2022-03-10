@@ -8,7 +8,9 @@ import json
 import argparse
 
 
-# example to run: python demography.py -y no_ancestry.yaml --MU 1e-3 --VS 1.0 --output_fie "sim.txt"
+# example to run: python demography.py -y no_ancestry.yaml --MU 1e-3 --VS 1.0 --POPT 1.0 -1.0 --E_SD 1 --E_MEAN 0 --output_file case_1_no_ancestry_rep1.txt
+# probably better to run this until I get E_SD, E_MEAN etc working properly, so as not to fool myself into thinking the input is specifying anything:
+# python demography.py -y no_ancestry.yaml --MU 1e-3 --VS 1.0 --POPT 1.0 -1.0 --output_file case_1_no_ancestry_rep1.txt
 
 
 def make_parser() -> argparse.ArgumentParser:
@@ -33,7 +35,12 @@ def make_parser() -> argparse.ArgumentParser:
         help="Variance of S, the inverse strength of stabilizing selection",
     )
 
-    """
+    parser.add_argument(
+        "--sim_type",
+        type=str,
+        help="which case from harpak+przeworski is being modeled",
+    )
+
     parser.add_argument(
         "--POPT",
         type=float,
@@ -41,7 +48,20 @@ def make_parser() -> argparse.ArgumentParser:
         default=0,
         help="Population optimum trait value",
     )
-    """
+
+    parser.add_argument(
+        "--E_SD",
+        type=float,
+        nargs="+",
+        help="Environmental effect distribution's standard deviation",
+    )
+
+    parser.add_argument(
+        "--E_MEAN",
+        type=float,
+        nargs="+",
+        help="Environmental effect distribution's mean",
+    )
 
     parser.add_argument(
         "--output_file", "-o", type=str, default=None, help="Output file name"
@@ -65,6 +85,8 @@ def validate_args(args: argparse.Namespace):
             f"In this simulation using stabilizing selection, VS cannot be None"
         )
 
+    # see if you can write a statement for incorrect number of inputs for POPT, E_SD, VS here
+
 
 def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
     input_file = args.yaml
@@ -73,33 +95,46 @@ def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
 
     # E_SD = args.E_SD
     # E_MEAN = args.E_MEAN
-    # POPT = 0.0  # maybe if you do this as a list, then you can specify different slices for fwdpy11.Additive Popt
     # and then iterate over the individuals when you write to the text file
 
-    POPT = 1.0
     # optima_list = [0.0, 0.1, -0.1]
-    optima_list = [0.1, -0.1]
-    # optima_list = [args.POPT] #this actually works to make a list just like the above, but passing it is a different issue
+    # optima_list = [0.1, -0.1]
+    # this actually works to make a list just like the above, but passing it is a different issue
 
     VS = args.VS
-
-    E_SD = 1.0
-    # env_sd_list = [1.0, 1.3, 0.7]
-    env_sd_list = [1.3, 0.7]
-
-    E_MEAN = 1.0
-    # env_mean_list = [1.0, 1.1, 0.9]
-    env_mean_list = [1.1, 0.9]
-
     MU = args.MU
 
+    # E_SD = 1.0
+    # env_sd_list = [1.0, 1.3, 0.7]
+    # env_sd_list = [1.3, 0.7]
+
+    optima_list = args.POPT
+    env_sd_list = args.E_SD
+    env_mean_list = args.E_MEAN
+
+    ##E_MEAN = 1.0
+    # env_mean_list = [1.0, 1.1, 0.9]
+    # env_mean_list = [1.1, 0.9]
+
     burnin = 10
+
+    """
+    POPT = args.POPT
+    E_SD = args.E_SD
+    E_MEAN = args.E_MEAN
+    """  # I would like this, and the loops below, to be for i in POPT, E_SD, etc. if that's the case, hopefully it's because we can just be doing the above... and get rid of these defaults:
+    POPT_default = 0.0
+    E_SD_default = 1.0
+    E_MEAN_default = 0.0
+    #######HARDCODED IN!!! FIX!
 
     additive_objects = []
     for i in optima_list:
         additive_objects.append(
             fwdpy11.Additive(
-                2.0, fwdpy11.GSS(i, VS), fwdpy11.GaussianNoise(E_SD, E_MEAN)
+                2.0,
+                fwdpy11.GSS(i, VS),
+                fwdpy11.GaussianNoise(E_SD_default, E_MEAN_default),
             )
         )
     print(additive_objects)
@@ -109,14 +144,20 @@ def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
     for i in env_sd_list:
         env_sd_objects.append(
             fwdpy11.Additive(
-                2.0, fwdpy11.GSS(POPT, VS), fwdpy11.GaussianNoise(i, E_MEAN)
+                2.0,
+                fwdpy11.GSS(POPT_default, VS),
+                fwdpy11.GaussianNoise(i, E_MEAN_default),
             )
         )
 
     env_mean_objects = []
     for i in env_mean_list:
         env_mean_objects.append(
-            fwdpy11.Additive(2.0, fwdpy11.GSS(POPT, VS), fwdpy11.GaussianNoise(E_SD, i))
+            fwdpy11.Additive(
+                2.0,
+                fwdpy11.GSS(POPT_default, VS),
+                fwdpy11.GaussianNoise(E_SD_default, i),
+            )
         )
 
     demog = fwdpy11.discrete_demography.from_demes(input_file, burnin)
@@ -137,13 +178,22 @@ def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
     dbg = fwdpy11.DemographyDebugger(initial_sizes, demog.model)
     print(dbg.report)
 
+    """
+    if args.sim_type == popt_differs:
+        gvalue_objects = additive_objects
+    if args.sim_type == env_mean_differs:
+        gvalue_objects = env_mean_objects
+    if args.sim_type == env_sd_differs:
+        gvalue_objeccts = env_sd_objects
+    """  ###########ASK SKYLAR ABOUT THIS. IF THIS IS THE WAY TO DO IT THEN gvalue_objects IS WHAT I WAS PUTTING INTO gvalue
+
     pdict = {
         "sregions": [fwdpy11.GaussianS(0, 1, 1, 0.25)],
         "nregions": [],
         "recregions": [fwdpy11.PoissonInterval(0, 1.00, 1e-3)],
         "rates": (0, MU, None),
-        "gvalue": env_sd_objects,  #what I'm hardcoding in. Maybe I can make this an arg in the argparser so that I'm changing what I'm varying?
-        # fwdpy11.Additive(gvalue_to_fitness= fwdpy11.GSS(optimum = moving_optimum_deme_2, VS), fwdpy11.GaussianNoise(E_SD, E_MEAN), ndemes = 3, scaling= 2)],
+        "gvalue": env_sd_objects,  # ************************************************ what I'm hardcoding in. Maybe I can make this an arg in the argparser so that I'm changing what I'm varying?
+        # (additive_objects if args.sim_type == popt_differs, env_sd_objects if args.sim_type == env_sd_differs, env_mean_objects if args.sim_type == env_mean_differs) #trying to specify argparser idea above
         "prune_selected": False,
         "simlen": demog.metadata["total_simulation_length"],
         "demography": demog,
