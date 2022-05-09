@@ -97,18 +97,18 @@ def run_sim(args: argparse.Namespace) -> fwdpy11.DiploidPopulation:
     E_MEAN = args.E_MEAN
 
     print(POPT)
-    print(env_sd_list)
-
-    additive_objects = []
-    for i in optima_list:
-        additive_objects.append(
-            fwdpy11.Additive(
-                2.0,
-                fwdpy11.GSS(i, VS),
-                fwdpy11.GaussianNoise(E_SD_default, E_MEAN_default),
-            )
-        )
-    print(additive_objects)
+    #print(env_sd_list)
+    # optima_list = args.POPT
+    # additive_objects = []
+    # for i in optima_list:
+    #     additive_objects.append(
+    #         fwdpy11.Additive(
+    #             2.0,
+    #             fwdpy11.GSS(i, VS),
+    #             fwdpy11.GaussianNoise(1, 0),
+    #         )
+    #     )
+    # print(additive_objects)
 
     gvalue_objects = []
     for i, y, z in zip(
